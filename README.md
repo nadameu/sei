@@ -19,3 +19,5 @@ Utilização
 ----------
 
 No sistema SEI! do TRF4, na tela de listagem de processos, selecionar &ldquo;Mostrar tipo e especificação dos processos&rdquo; ou &ldquo;Mostrar anotações dos processos&rdquo; conforme desejado.
+
+A opção &ldquo;Mostrar cores conforme tipo de processo&rdquo; mostra a listagem com cores diferentes, conforme o tipo de processo.
