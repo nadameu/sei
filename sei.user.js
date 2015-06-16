@@ -3,7 +3,7 @@
 // @namespace   http://nadameu.com.br/sei
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
-// @version     3
+// @version     4
 // @grant       GM_addStyle
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -22,7 +22,7 @@ function modificarTelaProcessos() {
 }
 
 function adicionarEstilos() {
-	GM_addStyle('table.tabelaProcessos { border-collapse: collapse; } .mostrarTipo table.tabelaProcessos td { border: 0 solid black; border-width: 1px 0; } table.tabelaProcessos td.colAdicional { padding: 0.5em 0.3em; } div.anotacao { background-color: #ffa; }');
+	GM_addStyle('table.tabelaProcessos { border-collapse: collapse; } .mostrarTipo table.tabelaProcessos td { border: 0 solid black; border-width: 1px 0; } table.tabelaProcessos td.colAdicional { padding: 0.5em 0.3em; } div.anotacao { background-color: #ffa; } div.anotacao.prioridade { background-color: #faa; font-weight: bold; }');
 	GM_addStyle('.colAdicional, .anotacao, .tipo, .especificacao, .ambos { display: none; } .mostrarAnotacoes .colAdicional, .mostrarTipo .colAdicional { display: table-cell; } .mostrarAnotacoes .anotacao { display: block; } .mostrarAnotacoes .iconeAnotacao { display: none; } .mostrarTipo .tipo, .mostrarTipo .especificacao { display: block; } .mostrarTipo th .tipo, .mostrarAnotacoes th .anotacao, .mostrarTipo.mostrarAnotacoes th .ambos { display: inline; font-weight: bold; } .ocultarCores tr { background: none !important; }');
 }
 
@@ -134,6 +134,12 @@ function obterCor(texto) {
 }
 
 function analisarAnotacoes() {
+	$('img[src="imagens/sei_anotacao_prioridade_pequeno.gif"]').each(function(i, img) {
+		var mouseover = $(img).attr('onmouseover');
+		let [trash, text, user] = /^return infraTooltipMostrar\('(.*)','(.*)'\);$/.exec(mouseover);
+		escreverColunaAdicional(img, '<div class="anotacao prioridade">' + corrigirHTML(text) + ' (' + corrigirHTML(user) + ')</div>');
+		$(img).addClass('iconeAnotacao');
+	});
 	$('img[src="imagens/sei_anotacao_pequeno.gif"]').each(function(i, img) {
 		var mouseover = $(img).attr('onmouseover');
 		let [trash, text, user] = /^return infraTooltipMostrar\('(.*)','(.*)'\);$/.exec(mouseover);
