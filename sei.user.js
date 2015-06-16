@@ -3,14 +3,12 @@
 // @namespace   http://nadameu.com.br/sei
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
-// @version     1
+// @version     2
 // @grant       GM_addStyle
 // @grant       GM_getValue
 // @grant       GM_setValue
-// @grant       GM_listValues
-// @grant       GM_deleteValue
 // ==/UserScript==
-if (/[\?&]acao=procedimento_controlar[&$]/.test(window.location.search)) {
+if (/[?&]acao=procedimento_controlar(&|$)/.test(window.location.search)) {
 	modificarTelaProcessos();
 }
 
