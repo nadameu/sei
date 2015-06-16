@@ -3,7 +3,7 @@
 // @namespace   http://nadameu.com.br/sei
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
-// @version     2
+// @version     3
 // @grant       GM_addStyle
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -18,11 +18,12 @@ function modificarTelaProcessos() {
 	modificarTabelas();
 	alternarExibicaoTipo(usuarioDesejaMostrarTipo());
 	alternarExibicaoAnotacoes(usuarioDesejaMostrarAnotacoes());
+	alternarExibicaoCores(usuarioDesejaMostrarCores());
 }
 
 function adicionarEstilos() {
 	GM_addStyle('table.tabelaProcessos { border-collapse: collapse; } .mostrarTipo table.tabelaProcessos td { border: 0 solid black; border-width: 1px 0; } table.tabelaProcessos td.colAdicional { padding: 0.5em 0.3em; } div.anotacao { background-color: #ffa; }');
-	GM_addStyle('.colAdicional, .anotacao, .tipo, .especificacao, .ambos { display: none; } .mostrarAnotacoes .colAdicional, .mostrarTipo .colAdicional { display: table-cell; } .mostrarAnotacoes .anotacao { display: block; } .mostrarAnotacoes .iconeAnotacao { display: none; } .mostrarTipo .tipo, .mostrarTipo .especificacao { display: block; } .mostrarTipo th .tipo, .mostrarAnotacoes th .anotacao, .mostrarTipo.mostrarAnotacoes th .ambos { display: inline; font-weight: bold; }');
+	GM_addStyle('.colAdicional, .anotacao, .tipo, .especificacao, .ambos { display: none; } .mostrarAnotacoes .colAdicional, .mostrarTipo .colAdicional { display: table-cell; } .mostrarAnotacoes .anotacao { display: block; } .mostrarAnotacoes .iconeAnotacao { display: none; } .mostrarTipo .tipo, .mostrarTipo .especificacao { display: block; } .mostrarTipo th .tipo, .mostrarAnotacoes th .anotacao, .mostrarTipo.mostrarAnotacoes th .ambos { display: inline; font-weight: bold; } .ocultarCores tr { background: none !important; }');
 }
 
 function criarBotoes() {
@@ -32,6 +33,9 @@ function criarBotoes() {
 	var botaoAnotacoes = criarBotaoAnotacoes();
 	botaoTipo.after('<br/>');
 	botaoTipo.next().after(botaoAnotacoes);
+	var botaoCor = criarBotaoCor();
+	botaoAnotacoes.after('<br/>');
+	botaoAnotacoes.next().after(botaoCor);
 }
 
 function criarBotaoTipo() {
@@ -48,6 +52,13 @@ function criarBotaoAnotacoes() {
 	});
 }
 
+function criarBotaoCor() {
+	return criarBotao('Mostrar cores conforme tipo de processo', usuarioDesejaMostrarCores(), function() {
+		usuarioDesejaMostrarCores(this.checked);
+		alternarExibicaoCores(this.checked);
+	});
+}
+
 function criarBotao(texto, checked, handler) {
 	var botao = $('<input type="checkbox">');
 	botao.get(0).checked = checked;
@@ -58,23 +69,25 @@ function criarBotao(texto, checked, handler) {
 }
 
 function usuarioDesejaMostrarTipo(value) {
-	if (typeof value !== 'undefined') {
-		if (value !== true && value !== false) {
-			throw new Error('Valor inválido: ' + value);
-		}
-		GM_setValue('mostrarTipo', value === true ? 'S' : 'N');
-	}
-	return GM_getValue('mostrarTipo', 'N') === 'S';
+	return getSetBoolean('mostrarTipo', value);
 }
 
 function usuarioDesejaMostrarAnotacoes(value) {
+	return getSetBoolean('mostrarAnotacoes', value);
+}
+
+function usuarioDesejaMostrarCores(value) {
+	return getSetBoolean('mostrarCores', value);
+}
+
+function getSetBoolean(name, value) {
 	if (typeof value !== 'undefined') {
 		if (value !== true && value !== false) {
-			throw new Error('Valor inválido: ' + value);
+			throw new Error('Valor inválido para "' + name + '": "' + value + '"');
 		}
-		GM_setValue('mostrarAnotacoes', value === true ? 'S' : 'N');
+		GM_setValue(name, value === true ? 'S' : 'N');
 	}
-	return GM_getValue('mostrarAnotacoes', 'N') === 'S';
+	return GM_getValue(name, 'N') === 'S';
 }
 
 function criarColunasAdicionais() {
@@ -104,7 +117,20 @@ function analisarTipo() {
 		let [trash, text, title] = /^return infraTooltipMostrar\('(.*)','(.*)'\);$/.exec(mouseover);
 		escreverColunaAdicional(link, '<div class="tipo"><b>' + corrigirHTML(title) + '</b></div>');
 		escreverColunaAdicional(link, '<div class="especificacao">' + corrigirHTML(text) + '</div></td>');
+		var cor = obterCor(title);
+		$(link).parents('tr').css({background: cor});
 	});
+}
+
+function obterCor(texto) {
+	var STEPS_H = 10;
+	var MULTI_H = 240 / STEPS_H;
+	var h = 0;
+	for (var i = 0, len = texto.length; i < len; i++) {
+		h = (h + texto.charCodeAt(i)) % STEPS_H;
+	}
+	var h = Math.floor(h * MULTI_H);
+	return 'hsl(' + h + ', 60%, 85%)';
 }
 
 function analisarAnotacoes() {
@@ -147,6 +173,10 @@ function alternarExibicaoTipo(exibir) {
 
 function alternarExibicaoAnotacoes(exibir) {
 	$('body').toggleClass('mostrarAnotacoes', exibir);
+}
+
+function alternarExibicaoCores(exibir) {
+	$('body').toggleClass('ocultarCores', !exibir);
 }
 
 function corrigirHTML(texto) {
