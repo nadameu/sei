@@ -21,3 +21,11 @@ Utilização
 No sistema SEI! do TRF4, na tela de listagem de processos, selecionar &ldquo;Mostrar tipo e especificação dos processos&rdquo; ou &ldquo;Mostrar anotações dos processos&rdquo; conforme desejado.
 
 A opção &ldquo;Mostrar cores conforme tipo de processo&rdquo; mostra a listagem com cores diferentes, conforme o tipo de processo.
+
+Selecionar a preferência de ordenação dos processos:
+* &ldquo;Padrão&rdquo;: ordenação padrão do sistema (data da última movimentação);
+* &ldquo;Ano e número (antigos primeiro)&rdquo;: ordem de antiguidade dos processos, sendo que os mais antigos aparecem primeiro;
+* &ldquo;Ano e número (novos primeiro)&rdquo;: idem, com os mais novos primeiro;
+* &ldquo;Tipo, especificação e anotação&rdquo;: ordem alfabética do tipo, especificação e anotação;
+* &ldquo;Anotação (somente texto)&rdquo;: ordena os processos pela anotação (ordem alfabética). Processos sem anotação aparecem depois dos que a possuem, ordenados conforme a opção &ldquo;Padrão&rdquo;;
+* &ldquo;Anotação (prioritários primeiro)&rdquo;: Idem, exceto que os lembretes prioritários aparecerão antes dos demais.
