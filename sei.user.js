@@ -3,7 +3,7 @@
 // @namespace   http://nadameu.com.br/sei
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
-// @version     5
+// @version     6
 // @grant       GM_addStyle
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -57,7 +57,7 @@ function criarBotoes() {
 	fieldset.appendChild(criarBotaoCor());
 	fieldset.appendChild(document.createElement('br'));
 	fieldset.appendChild(criarBotaoOrdenacao());
-	$('#divInfraAreaTabela').before(fragmento);
+	$('#divRecebidos').before(fragmento);
 }
 
 function criarBotaoTipo() {
