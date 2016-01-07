@@ -3,7 +3,7 @@
 // @namespace   http://nadameu.com.br/sei
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
-// @version     6
+// @version     7
 // @grant       GM_addStyle
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -34,7 +34,7 @@ function modificarTelaProcessos() {
 }
 
 function adicionarEstilos() {
-	GM_addStyle('table.tabelaProcessos { border-collapse: collapse; } .mostrarTipo table.tabelaProcessos td { border: 0 solid black; border-width: 1px 0; } table.tabelaProcessos td.colAdicional { padding: 0.5em 0.3em; } div.anotacao { background-color: #ffa; } div.anotacao.prioridade { background-color: #faa; font-weight: bold; }');
+	GM_addStyle('table.tabelaControle { border-collapse: collapse; } .mostrarTipo table.tabelaControle td { border: 0 solid black; border-width: 1px 0; } table.tabelaControle td.colAdicional { padding: 0.5em 0.3em; } div.anotacao { background-color: #ffa; } div.anotacao.prioridade { background-color: #faa; font-weight: bold; }');
 	GM_addStyle('.colAdicional, .anotacao, .tipo, .especificacao, .ambos { display: none; } .mostrarAnotacoes .colAdicional, .mostrarTipo .colAdicional { display: table-cell; } .mostrarAnotacoes .anotacao { display: block; } .mostrarAnotacoes .iconeAnotacao { display: none; } .mostrarTipo .tipo, .mostrarTipo .especificacao { display: block; } .mostrarTipo th .tipo, .mostrarAnotacoes th .anotacao, .mostrarTipo.mostrarAnotacoes th .ambos { display: inline; font-weight: bold; } .ocultarCores tr { background: none !important; } .ocultarFieldset fieldset > * { display: none; } .ocultarFieldset fieldset legend { display: inherit; }');
 }
 
@@ -154,7 +154,7 @@ function getSetInt(name, value) {
 }
 
 function criarColunasAdicionais() {
-	$('table.tabelaProcessos').each(function(i, tabela) {
+	$('table.tabelaControle').each(function(i, tabela) {
 		criarColunaAdicional(tabela);
 	});
 }
@@ -162,7 +162,7 @@ function criarColunasAdicionais() {
 function criarColunaAdicional(tabela) {
 	$(tabela).find('tr').each(function(i, linha) {
 		if ($(linha).find('th').length > 0) {
-			$('th:nth-child(3)', linha).after('<th class="tituloProcessos colAdicional"><span class="tipo">Tipo / Especificação</span><span class="ambos"> / </span><span class="anotacao">Anotações</span></th>');
+			$('th:nth-child(3)', linha).after('<th class="tituloControle colAdicional"><span class="tipo">Tipo / Especificação</span><span class="ambos"> / </span><span class="anotacao">Anotações</span></th>');
 		} else {
 			$('td:nth-child(3)', linha).after('<td class="colAdicional"></td>');
 		}
