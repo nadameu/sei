@@ -3,7 +3,7 @@
 // @namespace   http://nadameu.com.br/sei
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
-// @version     7
+// @version     8
 // @grant       GM_addStyle
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -255,7 +255,7 @@ function alternarExibicaoCores(exibir) {
 }
 
 function definirOrdenacaoTabelas(ordenacao) {
-	$('table.tabelaProcessos').each(function(t, tabela) {
+	$('table.tabelaControle').each(function(t, tabela) {
 		let linhas = $(tabela).find('tr[id]');
 		let informacoes = [];
 		
