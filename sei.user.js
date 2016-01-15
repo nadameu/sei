@@ -3,7 +3,7 @@
 // @namespace   http://nadameu.com.br/sei
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
-// @version     8
+// @version     9
 // @grant       GM_addStyle
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -18,6 +18,19 @@ const Ordenacao = {
 	PRIORITARIOS: 8
 };
 
+const CORES_MARCADORES = [
+	{cor: 'preto', hex: '000'},
+	{cor: 'branco', hex: 'fff', inverterTexto: true},
+	{cor: 'cinza', hex: 'c0c0c0', inverterTexto: true},
+	{cor: 'vermelho', hex: 'ed1c24'},
+	{cor: 'amarelo', hex: 'fff200', inverterTexto: true},
+	{cor: 'verde', hex: '0f0', inverterTexto: true},
+	{cor: 'azul', hex: '4285f4'},
+	{cor: 'rosa', hex: 'ff1cae'},
+	{cor: 'roxo', hex: '68339b'},
+	{cor: 'ciano', hex: '0ff', inverterTexto: true}
+];
+
 if (/[?&]acao=procedimento_controlar(&|$)/.test(window.location.search)) {
 	modificarTelaProcessos();
 }
@@ -28,14 +41,41 @@ function modificarTelaProcessos() {
 	modificarTabelas();
 	alternarExibicaoTipo(usuarioDesejaMostrarTipo());
 	alternarExibicaoAnotacoes(usuarioDesejaMostrarAnotacoes());
+	alternarExibicaoMarcadores(usuarioDesejaMostrarMarcadores());
 	alternarExibicaoCores(usuarioDesejaMostrarCores());
-	definirOrdenacaoTabelas(usuarioDesejaOrdenarTabelas());
+	definirOrdenacaoTabelas(usuarioDesejaOrdenarTabelas(), usuarioDesejaAgruparMarcadores());
 	alternarOcultacaoFieldset(usuarioDesejaOcultarFieldset());
 }
 
 function adicionarEstilos() {
-	GM_addStyle('table.tabelaControle { border-collapse: collapse; } .mostrarTipo table.tabelaControle td { border: 0 solid black; border-width: 1px 0; } table.tabelaControle td.colAdicional { padding: 0.5em 0.3em; } div.anotacao { background-color: #ffa; } div.anotacao.prioridade { background-color: #faa; font-weight: bold; }');
-	GM_addStyle('.colAdicional, .anotacao, .tipo, .especificacao, .ambos { display: none; } .mostrarAnotacoes .colAdicional, .mostrarTipo .colAdicional { display: table-cell; } .mostrarAnotacoes .anotacao { display: block; } .mostrarAnotacoes .iconeAnotacao { display: none; } .mostrarTipo .tipo, .mostrarTipo .especificacao { display: block; } .mostrarTipo th .tipo, .mostrarAnotacoes th .anotacao, .mostrarTipo.mostrarAnotacoes th .ambos { display: inline; font-weight: bold; } .ocultarCores tr { background: none !important; } .ocultarFieldset fieldset > * { display: none; } .ocultarFieldset fieldset legend { display: inherit; }');
+	GM_addStyle([
+		'table.tabelaControle { border-collapse: collapse; }',
+		'.mostrarTipo table.tabelaControle td { border: 0 solid black; border-width: 1px 0; }',
+		'table.tabelaControle td.colAdicional, table.tabelaControle td.colAdicionalMarcador { padding: 0.5em 0.3em; }',
+		'div.anotacao { background-color: #ffa; }',
+		'div.anotacao.prioridade { background-color: #faa; font-weight: bold; }',
+		'div.tipo { font-weight: bold; }',
+		'div.marcador { text-align: center; font-weight: bold; }',
+		'td.colAdicionalMarcador img { float: left; padding-right: 1ex; }'
+	].join(' '));
+	GM_addStyle([
+		'.colAdicional, .colAdicionalMarcador, .anotacao, .tipo, .especificacao, .ambos { display: none; }',
+		'.mostrarAnotacoes .colAdicional, .mostrarTipo .colAdicional { display: table-cell; }',
+		'.mostrarAnotacoes .anotacao { display: block; }',
+		'.mostrarAnotacoes .iconeAnotacao { display: none; }',
+		'.mostrarTipo .tipo, .mostrarTipo .especificacao { display: block; }',
+		'.mostrarTipo th .tipo, .mostrarAnotacoes th .anotacao, .mostrarTipo.mostrarAnotacoes th .ambos { display: inline; font-weight: bold; }',
+		'.mostrarMarcadores .iconeMarcador { display: none; }',
+		'.mostrarMarcadores .colAdicionalMarcador { display: table-cell; }',
+		'.ocultarCores tr { background: none !important; }',
+		'.ocultarFieldset fieldset > * { display: none; }',
+		'.ocultarFieldset fieldset legend { display: inherit; }'
+	].join(' '));
+	var cores = ['div.marcador, tr.infraTrAcessada div.marcador { padding: 1px; border: 1px solid black; border-radius: 4px; color: white; }'];
+	CORES_MARCADORES.forEach(function(info) {
+		cores.push('div.marcador[data-cor="' + info.cor + '"], tr.infraTrAcessada div.marcador[data-cor="' + info.cor + '"] { border-color: #' + info.hex + '; background-color: #' + info.hex + ';' + (info.inverterTexto ? ' color: black;' : '') + ' }');
+	});
+	GM_addStyle(cores.join(' '));
 }
 
 function criarBotoes() {
@@ -56,6 +96,10 @@ function criarBotoes() {
 	fieldset.appendChild(document.createElement('br'));
 	fieldset.appendChild(criarBotaoCor());
 	fieldset.appendChild(document.createElement('br'));
+	fieldset.appendChild(criarBotaoMarcadores());
+	fieldset.appendChild(document.createElement('br'));
+	fieldset.appendChild(criarBotaoAgruparMarcadores());
+	fieldset.appendChild(document.createElement('br'));
 	fieldset.appendChild(criarBotaoOrdenacao());
 	$('#divRecebidos').before(fragmento);
 }
@@ -71,6 +115,13 @@ function criarBotaoAnotacoes() {
 	return criarBotao('Mostrar anotações dos processos', usuarioDesejaMostrarAnotacoes(), function() {
 		usuarioDesejaMostrarAnotacoes(this.checked);
 		alternarExibicaoAnotacoes(this.checked);
+	});
+}
+
+function criarBotaoMarcadores() {
+	return criarBotao('Mostrar texto dos marcadores dos processos', usuarioDesejaMostrarMarcadores(), function() {
+		usuarioDesejaMostrarMarcadores(this.checked);
+		alternarExibicaoMarcadores(this.checked);
 	});
 }
 
@@ -99,9 +150,16 @@ function criarBotaoOrdenacao() {
 	botao.on('change', function() {
 		let valor = this.value | 0;
 		usuarioDesejaOrdenarTabelas(valor);
-		definirOrdenacaoTabelas(valor);
+		definirOrdenacaoTabelas(valor, usuarioDesejaAgruparMarcadores());
 	});
 	return label.get(0);
+}
+
+function criarBotaoAgruparMarcadores() {
+	return criarBotao('Agrupar processos por marcador', usuarioDesejaAgruparMarcadores(), function() {
+		usuarioDesejaAgruparMarcadores(this.checked);
+		definirOrdenacaoTabelas(usuarioDesejaOrdenarTabelas(), this.checked);
+	});
 }
 
 function criarBotao(texto, checked, handler) {
@@ -125,8 +183,16 @@ function usuarioDesejaMostrarCores(value) {
 	return getSetBoolean('mostrarCores', value);
 }
 
+function usuarioDesejaMostrarMarcadores(value) {
+	return getSetBoolean('mostrarMarcadores', value);
+}
+
 function usuarioDesejaOrdenarTabelas(value) {
 	return getSetInt('ordenarTabelas', value);
+}
+
+function usuarioDesejaAgruparMarcadores(value) {
+	return getSetBoolean('agruparMarcadores', value);
 }
 
 function usuarioDesejaOcultarFieldset(value) {
@@ -159,6 +225,12 @@ function criarColunasAdicionais() {
 	});
 }
 
+function criarColunasAdicionaisMarcador() {
+	$('table.tabelaControle').each(function(i, tabela) {
+		criarColunaAdicionalMarcador(tabela);
+	});
+}
+
 function criarColunaAdicional(tabela) {
 	$(tabela).find('tr').each(function(i, linha) {
 		if ($(linha).find('th').length > 0) {
@@ -169,16 +241,27 @@ function criarColunaAdicional(tabela) {
 	});
 }
 
+function criarColunaAdicionalMarcador(tabela) {
+	$(tabela).find('tr').each(function(i, linha) {
+		if ($(linha).find('th').length > 0) {
+			$('th:nth-child(3)', linha).after('<th class="tituloControle colAdicionalMarcador">Marcador</th>');
+		} else {
+			$('td:nth-child(3)', linha).after('<td class="colAdicionalMarcador"></td>');
+		}
+	});
+}
+
 function modificarTabelas() {
 	analisarTipo();
 	analisarAnotacoes();
+	analisarMarcadores();
 }
 
 function analisarTipo() {
 	$('a[href^="controlador.php?acao=procedimento_trabalhar"]').each(function(i, link) {
 		var mouseover = $(link).attr('onmouseover');
 		let [trash, text, title] = /^return infraTooltipMostrar\('(.*)','(.*)'\);$/.exec(mouseover);
-		escreverColunaAdicional(link, '<div class="tipo"><b>' + corrigirHTML(title) + '</b></div>');
+		escreverColunaAdicional(link, '<div class="tipo">' + corrigirHTML(title) + '</div>');
 		if (text !== '') {
 			escreverColunaAdicional(link, '<div class="especificacao">' + corrigirHTML(text) + '</div></td>');
 		}
@@ -213,8 +296,26 @@ function analisarAnotacoes() {
 	});
 }
 
+function analisarMarcadores() {
+	$('table img[src^="imagens/marcador_"]').each(function(i, img) {
+		let [, cor] = /^imagens\/marcador_(.*)\.png$/.exec($(img).attr('src'));
+		var mouseover = $(img).attr('onmouseover');
+		let [, text, title] = /^return infraTooltipMostrar\('(.*)','(.*)'\);$/.exec(mouseover);
+		escreverColunaAdicionalMarcador(img, '<div class="marcador" data-cor="' + cor + '">' + corrigirHTML(title) + '</div>');
+		if (text !== '') {
+			escreverColunaAdicionalMarcador(img, '<div class="marcadorTexto">' + corrigirHTML(text) + '</div>');
+		}
+		$(img).addClass('iconeMarcador');
+	});
+}
+
 function escreverColunaAdicional(elemento, texto) {
 	var coluna = obterColuna(elemento);
+	$(coluna).append(texto);
+}
+
+function escreverColunaAdicionalMarcador(elemento, texto) {
+	var coluna = obterColunaMarcador(elemento);
 	$(coluna).append(texto);
 }
 
@@ -225,6 +326,16 @@ function obterColuna(elemento) {
 	} else {
 		criarColunasAdicionais();
 		return obterColuna(elemento);
+	}
+}
+
+function obterColunaMarcador(elemento) {
+	var coluna, colunas = $(elemento).parents('tr').find('td.colAdicionalMarcador');
+	if (colunas.length > 0) {
+		return colunas[0];
+	} else {
+		criarColunasAdicionaisMarcador();
+		return obterColunaMarcador(elemento);
 	}
 }
 
@@ -250,11 +361,15 @@ function alternarExibicaoAnotacoes(exibir) {
 	$('body').toggleClass('mostrarAnotacoes', exibir);
 }
 
+function alternarExibicaoMarcadores(exibir) {
+	$('body').toggleClass('mostrarMarcadores', exibir);
+}
+
 function alternarExibicaoCores(exibir) {
 	$('body').toggleClass('ocultarCores', !exibir);
 }
 
-function definirOrdenacaoTabelas(ordenacao) {
+function definirOrdenacaoTabelas(ordenacao, agrupar) {
 	$('table.tabelaControle').each(function(t, tabela) {
 		let linhas = $(tabela).find('tr[id]');
 		let informacoes = [];
@@ -271,7 +386,7 @@ function definirOrdenacaoTabelas(ordenacao) {
 				id: link.href.match(/\&id_procedimento=(\d+)\&/)[1] | 0,
 				ordemOriginal: $link.attr('data-ordem-original')
 			};
-			['tipo', 'especificacao', 'anotacao', 'prioridade'].forEach(function(dado) {
+			['tipo', 'especificacao', 'anotacao', 'prioridade', 'marcador'].forEach(function(dado) {
 				let elementos = $linha.find('.' + dado);
 				let texto;
 				if (elementos.length === 0) {
@@ -307,7 +422,11 @@ function definirOrdenacaoTabelas(ordenacao) {
 				funcaoOrdenacao = ordenarPorOrdemPadrao;
 				break;
 		}
-		informacoes.sort(funcaoOrdenacao);
+		if (agrupar) {
+			informacoes.sort(gerarFuncaoOrdenarPorMarcador(funcaoOrdenacao, ordenacao & Ordenacao.INVERTER));
+		} else {
+			informacoes.sort(funcaoOrdenacao);
+		}
 		if (ordenacao & Ordenacao.INVERTER) {
 			informacoes.reverse();
 		}
@@ -318,6 +437,25 @@ function definirOrdenacaoTabelas(ordenacao) {
 		});
 		tabela.tBodies[0].appendChild(fragmento);
 	});
+}
+
+function gerarFuncaoOrdenarPorMarcador(fnOrdenacao, inverter) {
+	return function(a, b) {
+		let textoA = a.marcador === '' ? 'zz' : a.marcador;
+		let textoB = b.marcador === '' ? 'zz' : b.marcador;
+		if (inverter) {
+			let temp = textoA;
+			textoA = textoB;
+			textoB = temp;
+		}
+		if (textoA < textoB) {
+			return -1;
+		} else if (textoA > textoB) {
+			return +1;
+		} else {
+			return fnOrdenacao(a, b);
+		}
+	};
 }
 
 function ordenarPorAnotacao(a, b) {
@@ -367,5 +505,5 @@ function ordenarPorTipoEspecificacaoAnotacao(a, b) {
 }
 
 function corrigirHTML(texto) {
-	return texto.replace(/\\r/g, '\r').replace(/\\n/g, '\n').replace(/\\&/g, '&');
+	return texto.replace(/\\r/g, '\r').replace(/\\n/g, '\n').replace(/\\&/g, '&').replace(/\r\n/g, '<br/>');
 }
