@@ -18,9 +18,11 @@ Após instalado, o script será atualizado automaticamente sempre que houver uma
 Utilização
 ----------
 
-No sistema SEI! do TRF4, na tela de listagem de processos, selecionar &ldquo;Mostrar tipo e especificação dos processos&rdquo; ou &ldquo;Mostrar anotações dos processos&rdquo; conforme desejado.
+No sistema SEI! do TRF4, na tela de listagem de processos, selecionar &ldquo;Mostrar tipo e especificação dos processos&rdquo;, &ldquo;Mostrar anotações dos processos&rdquo; e &ldquo;Mostrar texto dos marcadores dos processos&rdquo; conforme desejado.
 
 A opção &ldquo;Mostrar cores conforme tipo de processo&rdquo; mostra a listagem com cores diferentes, conforme o tipo de processo.
+
+A opção &ldquo;Agrupar processos por marcador&rdquo; organiza os processos de acordo com o marcador a eles vinculado.
 
 Selecionar a preferência de ordenação dos processos:
 * &ldquo;Padrão&rdquo;: ordenação padrão do sistema (data da última movimentação);
