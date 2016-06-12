@@ -3,7 +3,7 @@
 // @namespace   http://nadameu.com.br/sei
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
-// @version     9
+// @version     10
 // @grant       GM_addStyle
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -263,7 +263,7 @@ function analisarTipo() {
 		let [trash, text, title] = /^return infraTooltipMostrar\('(.*)','(.*)'\);$/.exec(mouseover);
 		escreverColunaAdicional(link, '<div class="tipo">' + corrigirHTML(title) + '</div>');
 		if (text !== '') {
-			escreverColunaAdicional(link, '<div class="especificacao">' + corrigirHTML(text) + '</div></td>');
+			escreverColunaAdicional(link, '<div class="especificacao">' + corrigirHTML(text) + '</div>');
 		}
 		var cor = obterCor(title);
 		$(link).parents('tr').css({background: cor});
@@ -282,24 +282,28 @@ function obterCor(texto) {
 }
 
 function analisarAnotacoes() {
-	$('img[src="imagens/sei_anotacao_prioridade_pequeno.gif"]').each(function(i, img) {
-		var mouseover = $(img).attr('onmouseover');
+	
+	let prioridade;
+	
+	let analisarAnotacao = function(i, img) {
+		let $img = $(img), $link = $img.parent('a');
+		var mouseover = $link.attr('onmouseover');
 		let [trash, text, user] = /^return infraTooltipMostrar\('(.*)','(.*)'\);$/.exec(mouseover);
-		escreverColunaAdicional(img, '<div class="anotacao prioridade">' + corrigirHTML(text) + ' (' + corrigirHTML(user) + ')</div>');
+		escreverColunaAdicionalAnotacao(img, corrigirHTML(text) + ' (' + corrigirHTML(user) + ')', $link.attr('href'), prioridade);
 		$(img).addClass('iconeAnotacao');
-	});
-	$('img[src="imagens/sei_anotacao_pequeno.gif"]').each(function(i, img) {
-		var mouseover = $(img).attr('onmouseover');
-		let [trash, text, user] = /^return infraTooltipMostrar\('(.*)','(.*)'\);$/.exec(mouseover);
-		escreverColunaAdicional(img, '<div class="anotacao">' + corrigirHTML(text) + ' (' + corrigirHTML(user) + ')</div>');
-		$(img).addClass('iconeAnotacao');
-	});
+	};
+	
+	prioridade = true;
+	$('img[src="imagens/sei_anotacao_prioridade_pequeno.gif"]').each(analisarAnotacao);
+	
+	prioridade = false;
+	$('img[src="imagens/sei_anotacao_pequeno.gif"]').each(analisarAnotacao);
 }
 
 function analisarMarcadores() {
 	$('table img[src^="imagens/marcador_"]').each(function(i, img) {
 		let [, cor] = /^imagens\/marcador_(.*)\.png$/.exec($(img).attr('src'));
-		var mouseover = $(img).attr('onmouseover');
+		var mouseover = $(img).parent('a').attr('onmouseover');
 		let [, text, title] = /^return infraTooltipMostrar\('(.*)','(.*)'\);$/.exec(mouseover);
 		escreverColunaAdicionalMarcador(img, '<div class="marcador" data-cor="' + cor + '">' + corrigirHTML(title) + '</div>');
 		if (text !== '') {
@@ -312,6 +316,16 @@ function analisarMarcadores() {
 function escreverColunaAdicional(elemento, texto) {
 	var coluna = obterColuna(elemento);
 	$(coluna).append(texto);
+}
+
+function escreverColunaAdicionalAnotacao(elemento, texto, link, prioridade) {
+	let classes = ['anotacao'];
+	if (prioridade) {
+		classes.push('prioridade');
+	}
+	let imagem = prioridade ? 'imagens/sei_anotacao_prioridade_pequeno.gif' : 'imagens/sei_anotacao_pequeno.gif';
+	let html = '<div class="' + classes.join(' ') + '"><a href="' + link + '"><img src="' + imagem + '"/></a> ' + texto + '</div>'
+	escreverColunaAdicional(elemento, html);
 }
 
 function escreverColunaAdicionalMarcador(elemento, texto) {
@@ -376,14 +390,31 @@ function definirOrdenacaoTabelas(ordenacao, agrupar) {
 		
 		linhas.each(function(l, linha) {
 			let $linha = $(linha);
-			let links = $linha.find('a[tabindex]');
+			let links = $linha.find('a[href^="controlador.php?acao=procedimento_trabalhar&"]');
 			links.each(function(i, link) {
-				$(link).attr('data-ordem-original', link.tabIndex).attr('tabindex', null);
+				let $link = $(link);
+				if (! $link.attr('data-ordem-original')) {
+					$(link).attr('data-ordem-original', l);
+				}
 			})
 			let link = $linha.find('a[data-ordem-original]')[0], $link = $(link);
+			let numeroFormatado = link.textContent, textoNumero = numeroFormatado.replace(/[\.-]/g, '');
+			let ano, ordinal, local;
+			if (textoNumero.length === 20) {
+				ano = Number(textoNumero.substr(9, 4));
+				ordinal = Number(textoNumero.substr(0, 7));
+				local = Number(textoNumero.substr(16, 4));
+			} else if (textoNumero.length === 13) {
+				ano = 2000 + Number(textoNumero.substr(0, 2));
+				ordinal = Number(textoNumero.substr(3, 9));
+				local = Number(textoNumero.substr(2, 1));
+			} else {
+				throw new Error('Tipo de número desconhecido: ' + numeroFormatado);
+			}
+			let numero = ano * 1000000000 + ordinal + local / 10000;
 			let informacao = {
 				elemento: linha,
-				id: link.href.match(/\&id_procedimento=(\d+)\&/)[1] | 0,
+				numero: numero,
 				ordemOriginal: $link.attr('data-ordem-original')
 			};
 			['tipo', 'especificacao', 'anotacao', 'prioridade', 'marcador'].forEach(function(dado) {
@@ -414,7 +445,7 @@ function definirOrdenacaoTabelas(ordenacao, agrupar) {
 				break;
 				
 			case Ordenacao.NUMERO:
-				funcaoOrdenacao = ordenarPorId;
+				funcaoOrdenacao = ordenarPorNumero;
 				break;
 				
 			case Ordenacao.PADRAO:
@@ -484,8 +515,8 @@ function ordenarPorAnotacaoPrioritariosPrimeiro(a, b) {
 	}
 }
 
-function ordenarPorId(a, b) {
-	return a.id - b.id;
+function ordenarPorNumero(a, b) {
+	return a.numero - b.numero;
 }
 
 function ordenarPorOrdemPadrao(a, b) {
