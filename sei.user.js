@@ -3,7 +3,7 @@
 // @namespace   http://nadameu.com.br/sei
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
-// @version     10
+// @version     11
 // @grant       GM_addStyle
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -50,6 +50,7 @@ function modificarTelaProcessos() {
 function adicionarEstilos() {
 	GM_addStyle([
 		'table.tabelaControle { border-collapse: collapse; }',
+		'table.tabelaControle td:nth-child(3) { white-space: nowrap; }',
 		'.mostrarTipo table.tabelaControle td { border: 0 solid black; border-width: 1px 0; }',
 		'table.tabelaControle td.colAdicional, table.tabelaControle td.colAdicionalMarcador { padding: 0.5em 0.3em; }',
 		'div.anotacao { background-color: #ffa; }',
