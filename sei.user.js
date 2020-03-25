@@ -3,7 +3,8 @@
 // @namespace   http://nadameu.com.br/sei
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
-// @version     12
+// @include     https://sei.trf4.jus.br/controlador.php?*
+// @version     12.1.0
 // @grant       GM_addStyle
 // @grant       GM_getValue
 // @grant       GM_setValue
