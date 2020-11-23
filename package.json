@@ -1,0 +1,18 @@
+{
+  "name": "sei",
+  "version": "12.1.0",
+  "description": "Facilita a utilização do sistema SEI! do TRF4",
+  "repository": "github:nadameu/sei.git",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^10.0.0",
+    "@rollup/plugin-typescript": "^6.1.0",
+    "adt-ts": "^0.4.0",
+    "rollup": "^2.33.3",
+    "tslib": "^2.0.3",
+    "typescript": "^4.0.5"
+  },
+  "scripts": {
+    "build": "rollup -c -i src/index.ts"
+  }
+}
