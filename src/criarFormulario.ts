@@ -94,7 +94,7 @@ export function criarFormulario({ divRecebidos }: { divRecebidos: HTMLDivElement
     }),
   );
   const fieldset = document.createElement('fieldset');
-  fieldset.className = 'infraFieldset';
+  fieldset.className = 'infraFieldset ml-0  pl-0 d-none  d-md-block  col-12 col-md-12';
   fieldset.append(
     legend,
     criarCheckboxTipo(),
@@ -111,18 +111,30 @@ export function criarFormulario({ divRecebidos }: { divRecebidos: HTMLDivElement
   );
   divRecebidos.insertAdjacentElement('beforebegin', fieldset);
 }
+
+let checkboxId = 0;
+
 function criarCheckbox(
   texto: string,
   checked: boolean,
   handler: (target: HTMLInputElement) => void,
 ) {
+  const id = `gmSeiChkBox${++checkboxId}`;
+
   const input = document.createElement('input');
   input.type = 'checkbox';
   input.className = 'infraCheckbox';
+  input.id = id;
   input.checked = checked;
+  input.addEventListener('change', () => handler(input));
+
   const label = document.createElement('label');
   label.className = 'infraLabelOpcional';
-  label.append(input, ` ${texto}`);
-  input.addEventListener('change', () => handler(input));
-  return label;
+  label.htmlFor = id;
+  label.textContent = ` ${texto}`;
+
+  const fragmento = document.createDocumentFragment();
+  fragmento.append(input, label);
+
+  return fragmento;
 }

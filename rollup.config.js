@@ -15,6 +15,6 @@ const options = {
 // ==/UserScript==
     `,
   },
-  plugins: [typescript({ target: ts.ScriptTarget.ES2015 })],
+  plugins: [typescript({ target: ts.ScriptTarget.ES2018 })],
 };
 export default options;

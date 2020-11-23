@@ -6,9 +6,9 @@ import {
   alternarExibicaoTipo,
   alternarOcultacaoFieldset,
 } from './alternarExibicao';
+import { analisarPagina } from './analisar';
 import { criarFormulario } from './criarFormulario';
 import { definirOrdenacaoTabelas } from './definirOrdenacaoTabelas';
-import { modificarTabelas } from './modificarTabelas';
 import {
   usuarioDesejaAgruparMarcadores,
   usuarioDesejaMostrarAnotacoes,
@@ -21,10 +21,10 @@ import {
 import { query } from './query';
 
 export async function modificarTelaProcessos() {
+  const pagina = analisarPagina();
   adicionarEstilos();
   const divRecebidos = await query<HTMLDivElement>('div#divRecebidos');
   criarFormulario({ divRecebidos });
-  modificarTabelas();
   alternarExibicaoTipo(usuarioDesejaMostrarTipo());
   alternarExibicaoAnotacoes(usuarioDesejaMostrarAnotacoes());
   alternarExibicaoMarcadores(usuarioDesejaMostrarMarcadores());

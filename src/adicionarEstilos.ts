@@ -18,7 +18,7 @@ div.tipo { font-weight: bold; }
 div.marcador { text-align: center; font-weight: bold; }
 td.colAdicionalMarcador img { float: left; padding-right: 1ex; }
 
-.colAdicional, .colAdicionalMarcador, .anotacao, .tipo, .especificacao, .ambos { display: none; }
+th.colAdicional, td.colAdicional, .colAdicionalMarcador, .anotacao, .tipo, .especificacao, .ambos { display: none; }
 .mostrarAnotacoes .colAdicional, .mostrarTipo .colAdicional { display: table-cell; }
 .mostrarAnotacoes .anotacao { display: block; }
 .mostrarAnotacoes .iconeAnotacao { display: none; }

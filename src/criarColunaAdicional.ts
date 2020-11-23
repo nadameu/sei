@@ -2,23 +2,25 @@ const makeCriarColunaAdicional = (htmlCelulaCabecalho: string, htmlCelulaCorpo: 
   tabela: HTMLTableElement,
 ) => {
   tabela.querySelectorAll('tr').forEach(linha => {
-    const terceiro = linha.querySelector('th:nth-child(3), td:nth-child(3)');
-    if (!terceiro) throw new Error('Linha não possui colunas suficientes.');
+    const coluna = linha.querySelector<HTMLTableCellElement>('th:nth-child(2), td:nth-child(3)');
+    if (!coluna) throw new Error('Linha não possui colunas suficientes.');
 
-    if (terceiro.matches('th')) {
-      terceiro.insertAdjacentHTML('afterend', htmlCelulaCabecalho);
+    if (coluna.matches('th')) {
+      coluna.colSpan = 2;
+      coluna.insertAdjacentHTML('afterend', '<th class="infraTh"></th>');
+      coluna.insertAdjacentHTML('afterend', htmlCelulaCabecalho);
     } else {
-      terceiro.insertAdjacentHTML('afterend', htmlCelulaCorpo);
+      coluna.insertAdjacentHTML('afterend', htmlCelulaCorpo);
     }
   });
 };
 
 export const criarColunaAdicional = makeCriarColunaAdicional(
-  '<th class="tituloControle colAdicional"><span class="tipo">Tipo / Especificação</span><span class="ambos"> / </span><span class="anotacao">Anotações</span></th>',
+  '<th class="infraTh tituloControle colAdicional"><span class="tipo">Tipo / Especificação</span><span class="ambos"> / </span><span class="anotacao">Anotações</span></th>',
   '<td class="colAdicional"></td>',
 );
 
 export const criarColunaAdicionalMarcador = makeCriarColunaAdicional(
-  '<th class="tituloControle colAdicionalMarcador">Marcador</th>',
+  '<th class="infraTh tituloControle colAdicionalMarcador">Marcador</th>',
   '<td class="colAdicionalMarcador"></td>',
 );

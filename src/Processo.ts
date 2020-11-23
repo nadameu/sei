@@ -1,10 +1,11 @@
+import { Anotacao } from './Anotacao';
+import { Marcador } from './Marcador';
+
 export interface Processo {
-  anotacao: string;
-  elemento: HTMLTableRowElement;
-  especificacao: string;
-  marcador: string;
+  linha: HTMLTableRowElement;
   numero: number;
-  ordemOriginal: number;
-  prioridade: string;
   tipo: string;
+  especificacao: string;
+  anotacao?: Anotacao;
+  marcador?: Marcador;
 }
