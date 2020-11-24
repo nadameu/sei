@@ -68,7 +68,16 @@ function analisarLinha(linha: HTMLTableRowElement, ordemOriginal: number): Proce
   );
   const marcador = imgMarcador ? analisarMarcador(imgMarcador) : undefined;
 
-  return { linha, ordemOriginal, numero, tipo, especificacao, anotacao, marcador };
+  return {
+    linha,
+    link: linkProcesso,
+    ordemOriginal,
+    numero,
+    tipo,
+    especificacao,
+    anotacao,
+    marcador,
+  };
 }
 
 function analisarNumeroFormatado(numeroFormatado: string) {

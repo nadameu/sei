@@ -3,6 +3,7 @@ import { Marcador } from './Marcador';
 
 export interface Processo {
   linha: HTMLTableRowElement;
+  link: HTMLAnchorElement;
   ordemOriginal: number;
   numero: number;
   tipo: string;
