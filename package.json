@@ -9,10 +9,12 @@
     "@rollup/plugin-typescript": "^6.1.0",
     "adt-ts": "^0.4.0",
     "rollup": "^2.33.3",
+    "rollup-plugin-serve": "^1.1.0",
     "tslib": "^2.0.3",
     "typescript": "^4.0.5"
   },
   "scripts": {
-    "build": "rollup -c -i src/index.ts"
+    "build": "rollup -c",
+    "start": "rollup -c rollup.dev.config.js -w"
   }
 }

@@ -3,6 +3,7 @@ import ts from 'typescript';
 
 /** @type {import('rollup').RollupOptions} */
 const options = {
+  input: 'src/index.ts',
   output: {
     format: 'es',
     file: 'sei.user.js',
