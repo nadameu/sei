@@ -1,52 +1,65 @@
-import {
-  alternarExibicaoAnotacoes,
-  alternarExibicaoCores,
-  alternarExibicaoMarcadores,
-  alternarExibicaoTipo,
-  alternarOcultacaoFieldset,
-} from './alternarExibicao';
+import { Acao } from './Acao';
 import { Ordenacao } from './Ordenacao';
-import {
-  usuarioDesejaAgruparMarcadores,
-  usuarioDesejaMostrarAnotacoes,
-  usuarioDesejaMostrarCores,
-  usuarioDesejaMostrarMarcadores,
-  usuarioDesejaMostrarTipo,
-  usuarioDesejaOcultarFieldset,
-  usuarioDesejaOrdenarTabelas,
-} from './preferencias';
-import { definirOrdenacaoTabelas } from './definirOrdenacaoTabelas';
+import { Preferencias } from './Preferencias';
 
-const criarCheckboxBoolean = (
-  texto: string,
-  fnPreferencia: (value?: boolean) => boolean,
-  fnAlternarExibicao: (checked: boolean) => void,
-) => () =>
-  criarCheckbox(texto, fnPreferencia(), chkbox => {
-    fnPreferencia(chkbox.checked);
-    fnAlternarExibicao(chkbox.checked);
-  });
-const criarCheckboxTipo = criarCheckboxBoolean(
-  'Mostrar tipo e especificação dos processos',
-  usuarioDesejaMostrarTipo,
-  alternarExibicaoTipo,
-);
-const criarCheckboxAnotacoes = criarCheckboxBoolean(
-  'Mostrar anotações dos processos',
-  usuarioDesejaMostrarAnotacoes,
-  alternarExibicaoAnotacoes,
-);
-const criarCheckboxMarcadores = criarCheckboxBoolean(
-  'Mostrar texto dos marcadores dos processos',
-  usuarioDesejaMostrarMarcadores,
-  alternarExibicaoMarcadores,
-);
-const criarCheckboxCor = criarCheckboxBoolean(
-  'Mostrar cores conforme tipo de processo',
-  usuarioDesejaMostrarCores,
-  alternarExibicaoCores,
-);
-function criarSelectOrdenacao() {
+type PreferenciasBoolean = {
+  [k in keyof Preferencias]: Preferencias[k] extends boolean ? k : never;
+}[keyof Preferencias];
+
+export function criarFormulario({
+  divRecebidos,
+  preferencias,
+  dispatch,
+}: {
+  divRecebidos: HTMLDivElement;
+  preferencias: Preferencias;
+  dispatch: (acao: Acao) => void;
+}) {
+  const legend = document.createElement('legend');
+  legend.style.fontSize = '1em';
+  legend.appendChild(criarCheckbox('Ocultar preferências', 'ocultarFieldset'));
+  const fieldset = document.createElement('fieldset');
+  fieldset.className = 'infraFieldset ml-0  pl-0 d-none  d-md-block  col-12 col-md-12';
+  fieldset.append(
+    legend,
+    criarCheckbox('Mostrar tipo e especificação dos processos', 'mostrarTipo'),
+    document.createElement('br'),
+    criarCheckbox('Mostrar anotações dos processos', 'mostrarAnotacoes'),
+    document.createElement('br'),
+    criarCheckbox('Mostrar cores conforme tipo de processo', 'mostrarCores'),
+    document.createElement('br'),
+    criarCheckbox('Mostrar texto dos marcadores dos processos', 'mostrarMarcadores'),
+    document.createElement('br'),
+    criarCheckbox('Agrupar processos por marcador', 'agruparMarcadores'),
+    document.createElement('br'),
+    criarSelectOrdenacao(preferencias.ordemTabelas, dispatch),
+  );
+
+  divRecebidos.insertAdjacentElement('beforebegin', fieldset);
+
+  function criarCheckbox(texto: string, preferencia: PreferenciasBoolean) {
+    const id = `gmSeiChkBox${preferencia}`;
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.className = 'infraCheckbox';
+    input.id = id;
+    input.checked = preferencias[preferencia];
+    input.addEventListener('change', () => dispatch(Acao.setBool(preferencia, input.checked)));
+
+    const label = document.createElement('label');
+    label.className = 'infraLabelOpcional';
+    label.htmlFor = id;
+    label.textContent = ` ${texto}`;
+
+    const fragmento = document.createDocumentFragment();
+    fragmento.append(input, label);
+
+    return fragmento;
+  }
+}
+
+function criarSelectOrdenacao(valor: number, dispatch: (acao: Acao) => void) {
   const select = document.createElement('select');
   select.style.display = 'inline-block';
   select.style.fontSize = '1em';
@@ -63,78 +76,13 @@ function criarSelectOrdenacao() {
   ];
   const options = campos.map(({ nome, valor }) => `<option value="${valor}">${nome}</option>`);
   select.insertAdjacentHTML('beforeend', options.join(''));
-  select.value = String(usuarioDesejaOrdenarTabelas());
+  select.value = String(valor);
   const label = document.createElement('label');
   label.className = 'infraLabelOpcional';
   label.append('Ordenação dos processos: ', select);
   select.addEventListener('change', () => {
     const valor = Number(select.value);
-    usuarioDesejaOrdenarTabelas(valor);
-    definirOrdenacaoTabelas(valor, usuarioDesejaAgruparMarcadores());
+    dispatch(Acao.setOrdenacao(valor));
   });
   return label;
-}
-function criarCheckboxAgruparMarcadores() {
-  return criarCheckbox(
-    'Agrupar processos por marcador',
-    usuarioDesejaAgruparMarcadores(),
-    chkbox => {
-      usuarioDesejaAgruparMarcadores(chkbox.checked);
-      definirOrdenacaoTabelas(usuarioDesejaOrdenarTabelas(), chkbox.checked);
-    },
-  );
-}
-export function criarFormulario({ divRecebidos }: { divRecebidos: HTMLDivElement }) {
-  const legend = document.createElement('legend');
-  legend.style.fontSize = '1em';
-  legend.appendChild(
-    criarCheckbox('Ocultar preferências', usuarioDesejaOcultarFieldset(), chkbox => {
-      usuarioDesejaOcultarFieldset(chkbox.checked);
-      alternarOcultacaoFieldset(chkbox.checked);
-    }),
-  );
-  const fieldset = document.createElement('fieldset');
-  fieldset.className = 'infraFieldset ml-0  pl-0 d-none  d-md-block  col-12 col-md-12';
-  fieldset.append(
-    legend,
-    criarCheckboxTipo(),
-    document.createElement('br'),
-    criarCheckboxAnotacoes(),
-    document.createElement('br'),
-    criarCheckboxCor(),
-    document.createElement('br'),
-    criarCheckboxMarcadores(),
-    document.createElement('br'),
-    criarCheckboxAgruparMarcadores(),
-    document.createElement('br'),
-    criarSelectOrdenacao(),
-  );
-  divRecebidos.insertAdjacentElement('beforebegin', fieldset);
-}
-
-let checkboxId = 0;
-
-function criarCheckbox(
-  texto: string,
-  checked: boolean,
-  handler: (target: HTMLInputElement) => void,
-) {
-  const id = `gmSeiChkBox${++checkboxId}`;
-
-  const input = document.createElement('input');
-  input.type = 'checkbox';
-  input.className = 'infraCheckbox';
-  input.id = id;
-  input.checked = checked;
-  input.addEventListener('change', () => handler(input));
-
-  const label = document.createElement('label');
-  label.className = 'infraLabelOpcional';
-  label.htmlFor = id;
-  label.textContent = ` ${texto}`;
-
-  const fragmento = document.createDocumentFragment();
-  fragmento.append(input, label);
-
-  return fragmento;
 }

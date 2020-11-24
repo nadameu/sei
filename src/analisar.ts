@@ -1,13 +1,6 @@
 import { Anotacao } from './Anotacao';
 import { CoresMarcadores } from './CoresMarcadores';
-import { corrigirHTML } from './corrigirHTML';
-import {
-  escreverColunaAdicional,
-  escreverColunaAdicionalAnotacao,
-  escreverColunaAdicionalMarcador,
-} from './escreverColunaAdicional';
 import { Marcador } from './Marcador';
-import { obterCor } from './obterCor';
 import { Pagina } from './Pagina';
 import { Processo } from './Processo';
 import { Tabela } from './Tabela';
@@ -24,27 +17,60 @@ export function analisarPagina(): Pagina {
 
 export function analisarTabela(tabela: HTMLTableElement): Tabela {
   const cabecalho = tabela.rows[0];
-  if (!cabecalho) throw new Error('Tabela não possui cabeçalho.');
+  const err = () => {
+    throw new Error('Erro ao analisar cabeçalho.');
+  };
+  if (!cabecalho) err();
   const celulasCabecalho = Array.from(cabecalho.cells);
-  if (!celulasCabecalho.every(x => x.matches('th'))) throw new Error('Cabeçalho não encontrado.');
-  if (cabecalho.cells.length !== 2) throw new Error('Cabeçalho não possui duas células.');
-  if (cabecalho.cells[1].colSpan !== 3)
-    throw new Error('Segunda célula do cabeçalho não possui "colSpan" igual a 3.');
+  if (!celulasCabecalho.every(x => x.matches('th'))) err();
+  if (cabecalho.cells.length !== 2) err();
+  if (cabecalho.cells[1].colSpan !== 3) err();
   const linhasProcessos = Array.from(tabela.rows).slice(1);
   return { cabecalho, processos: linhasProcessos.map(analisarLinha) };
 }
 
-function analisarLinha(linha: HTMLTableRowElement): Processo {
+function analisarTooltipLinkComMouseover(
+  link: HTMLAnchorElement,
+): { titulo: string; texto?: string } {
+  const match = link
+    .getAttribute('onmouseover')!
+    .match(/^return infraTooltipMostrar\('(.*)','(.+)'\);$/);
+  if (!match) throw new Error('Erro ao analisar tooltip.');
+  const [, texto, titulo] = match;
+  return { titulo, texto: texto || undefined };
+}
+
+function analisarLinha(linha: HTMLTableRowElement, ordemOriginal: number): Processo {
   if (linha.cells.length !== 4)
     throw new Error(`Número inesperado de células: ${linha.cells.length}.`);
 
-  const linkProcesso = linha.cells[2].querySelector(
+  const linkProcesso = linha.cells[2].querySelector<HTMLAnchorElement>(
     'a[href^="controlador.php?acao=procedimento_trabalhar&"][onmouseover]',
   );
   if (!linkProcesso) throw new Error('Link do processo não encontrado.');
 
   const numeroFormatado = linkProcesso.textContent;
   if (!numeroFormatado) throw new Error('Número do processo não encontrado.');
+  const numero = analisarNumeroFormatado(numeroFormatado);
+
+  const { titulo: tipo, texto: especificacao } = analisarTooltipLinkComMouseover(linkProcesso);
+
+  const imgAnotacao = linha.cells[1].querySelector<HTMLImageElement>(
+    [1, 2].map(n => `a[href][onmouseover] > img[src^="svg/anotacao${n}\.svg"]`).join(', '),
+  );
+  const anotacao = imgAnotacao ? analisarAnotacao(imgAnotacao) : undefined;
+
+  const imgMarcador = linha.cells[1].querySelector<HTMLImageElement>(
+    CoresMarcadores.map(
+      ({ cor }) => `a[href][onmouseover] > img[src^="svg/marcador_${cor}.svg"]`,
+    ).join(', '),
+  );
+  const marcador = imgMarcador ? analisarMarcador(imgMarcador) : undefined;
+
+  return { linha, ordemOriginal, numero, tipo, especificacao, anotacao, marcador };
+}
+
+function analisarNumeroFormatado(numeroFormatado: string) {
   const textoNumero = numeroFormatado.replace(/[\.-]/g, '');
   let ano, ordinal, local;
   if (textoNumero.length === 20) {
@@ -58,114 +84,86 @@ function analisarLinha(linha: HTMLTableRowElement): Processo {
   } else {
     throw new Error(`Tipo de número desconhecido: ${numeroFormatado}.`);
   }
-  const numero = ano * 1000000000 + ordinal + local / 10000;
-
-  const onmouseover = linkProcesso.getAttribute('onmouseover')!;
-  const match = /^return infraTooltipMostrar\('(.*)','(.+)'\);$/.exec(onmouseover);
-  if (!match) throw new Error('Link do processo não possui tipo e especificação.');
-  const [, especificacao, tipo] = match;
-
-  const imgAnotacao = linha.cells[1].querySelector(
-    [1, 2].map(n => `a[href][onmouseover] > img[src^="svg/anotacao${n}\.svg"]`).join(', '),
-  );
-
-  let anotacao: Anotacao | undefined = undefined;
-  if (imgAnotacao) {
-    const link = imgAnotacao.parentElement as HTMLAnchorElement;
-    const mouseover = link.getAttribute('onmouseover')!;
-    const match = /^return infraTooltipMostrar\('(.+)','(.+)'\);$/.exec(mouseover);
-    if (!match) throw new Error('Imagem de anotação não possui os dados necessários');
-    const [, texto, usuario] = match;
-    const prioridade = /^svg\/anotacao2\.svg/.test(imgAnotacao.getAttribute('src')!);
-    anotacao = { texto, usuario, prioridade };
-  }
-
-  const imgMarcador = linha.cells[1].querySelector(
-    CoresMarcadores.map(
-      ({ cor }) => `a[href][onmouseover] > img[src^="svg/marcador_${cor}.svg"]`,
-    ).join(', '),
-  );
-
-  let marcador: Marcador | undefined = undefined;
-  if (imgMarcador) {
-    const link = imgMarcador.parentElement as HTMLAnchorElement;
-    const mouseover = link.getAttribute('onmouseover')!;
-    const match = /^return infraTooltipMostrar\('(.*)','(.+)'\);$/.exec(mouseover);
-    if (!match) throw new Error('Imagem de marcador não possui os dados necessários');
-    const [, texto, nome] = match;
-    const cor = imgMarcador.getAttribute('src')!.match(/^svg\/marcador_(.*)\.svg/)![1];
-    marcador = { nome, cor, texto: texto || undefined };
-  }
-
-  return { linha, numero, tipo, especificacao, anotacao, marcador };
+  return ano * 1000000000 + ordinal + local / 10000;
 }
-export function analisarTipo(linha: HTMLTableRowElement) {
-  document
-    .querySelectorAll<HTMLAnchorElement>(
-      'tr a[href^="controlador.php?acao=procedimento_trabalhar"][onmouseover]',
-    )
-    .forEach(link => {
-      const mouseover = link.getAttribute('onmouseover')!;
-      const match = /^return infraTooltipMostrar\('(.*)','(.+)'\);$/.exec(mouseover);
-      if (!match) throw new Error();
-      const [, text, title] = match;
-      escreverColunaAdicional(link, `<div class="tipo">${corrigirHTML(title)}</div>`);
-      if (text !== '') {
-        escreverColunaAdicional(link, `<div class="especificacao">${corrigirHTML(text)}</div>`);
-      }
-      const cor = obterCor(title);
-      link.closest('tr')!.style.background = cor;
-    });
-}
-export function analisarAnotacoes(linha: HTMLTableRowElement) {
-  const analisarAnotacao = (prioridade: boolean) => (img: HTMLElement) => {
-    const link = img.parentElement as HTMLAnchorElement;
-    const mouseover = link.getAttribute('onmouseover')!;
-    const match = /^return infraTooltipMostrar\('(.*)','(.*)'\);$/.exec(mouseover);
-    if (!match) throw new Error();
-    const [, text, user] = match;
-    escreverColunaAdicionalAnotacao(
-      img,
-      `${corrigirHTML(text)} (${corrigirHTML(user)})`,
-      link.getAttribute('href')!,
-      prioridade,
-    );
-    img.classList.add('iconeAnotacao');
-  };
 
-  document
-    .querySelectorAll<HTMLImageElement>(
-      'a[href][onmouseover] > img[src="imagens/sei_anotacao_prioridade_pequeno.gif"]',
-    )
-    .forEach(analisarAnotacao(true));
+function analisarAnotacao(imgAnotacao: HTMLImageElement): Anotacao {
+  const link = imgAnotacao.parentElement as HTMLAnchorElement;
+  const { titulo: usuario, texto } = analisarTooltipLinkComMouseover(link);
+  if (!texto) throw new Error('Erro ao analisar tooltip.');
+  const prioridade = /^svg\/anotacao2\.svg/.test(imgAnotacao.getAttribute('src')!);
+  return { texto, usuario, prioridade, imagem: imgAnotacao, src: imgAnotacao.src, url: link.href };
+}
 
-  document
-    .querySelectorAll<HTMLImageElement>(
-      'a[href][onmouseover] > img[src="imagens/sei_anotacao_pequeno.gif"]',
-    )
-    .forEach(analisarAnotacao(false));
+function analisarMarcador(imgMarcador: HTMLImageElement): Marcador {
+  const link = imgMarcador.parentElement as HTMLAnchorElement;
+  const { titulo: nome, texto } = analisarTooltipLinkComMouseover(link);
+  const cor = imgMarcador.getAttribute('src')!.match(/^svg\/marcador_(.*)\.svg/)![1];
+  return { imagem: imgMarcador, nome, cor, texto: texto || undefined };
 }
-export function analisarMarcadores(linha: HTMLTableRowElement) {
-  document
-    .querySelectorAll<HTMLImageElement>('table a[onmouseover] > img[src^="imagens/marcador_"]')
-    .forEach(img => {
-      const match = /^imagens\/marcador_(.*)\.png$/.exec(img.getAttribute('src')!);
-      if (!match) throw new Error();
-      const [, cor] = match;
-      const mouseover = img.parentElement!.getAttribute('onmouseover')!;
-      const match2 = /^return infraTooltipMostrar\('(.*)','(.+)'\);$/.exec(mouseover);
-      if (!match2) throw new Error();
-      const [, text, title] = match2;
-      escreverColunaAdicionalMarcador(
-        img,
-        `<div class="marcador" data-cor="${cor}">${corrigirHTML(title)}</div>`,
-      );
-      if (text !== '') {
-        escreverColunaAdicionalMarcador(
-          img,
-          `<div class="marcadorTexto">${corrigirHTML(text)}</div>`,
-        );
-      }
-      img.classList.add('iconeMarcador');
-    });
-}
+
+// export function analisarTipo(linha: HTMLTableRowElement) {
+//   document
+//     .querySelectorAll<HTMLAnchorElement>(
+//       'tr a[href^="controlador.php?acao=procedimento_trabalhar"][onmouseover]',
+//     )
+//     .forEach(link => {
+//       const { titulo: title, texto: text } = analisarTooltipLinkComMouseover(link);
+//       escreverColunaAdicional(link, `<div class="tipo">${corrigirHTML(title)}</div>`);
+//       if (text !== undefined) {
+//         escreverColunaAdicional(link, `<div class="especificacao">${corrigirHTML(text)}</div>`);
+//       }
+//       const cor = obterCor(title);
+//       link.closest('tr')!.style.background = cor;
+//     });
+// }
+// export function analisarAnotacoes(linha: HTMLTableRowElement) {
+//   const analisarAnotacao = (prioridade: boolean) => (img: HTMLElement) => {
+//     const link = img.parentElement as HTMLAnchorElement;
+//     const { titulo: user, texto: text } = analisarTooltipLinkComMouseover(link);
+//     if (!text) throw new Error('Erro ao analisar tooltip.');
+//     escreverColunaAdicionalAnotacao(
+//       img,
+//       `${corrigirHTML(text)} (${corrigirHTML(user)})`,
+//       link.getAttribute('href')!,
+//       prioridade,
+//     );
+//     img.classList.add('iconeAnotacao');
+//   };
+
+//   document
+//     .querySelectorAll<HTMLImageElement>(
+//       'a[href][onmouseover] > img[src="imagens/sei_anotacao_prioridade_pequeno.gif"]',
+//     )
+//     .forEach(analisarAnotacao(true));
+
+//   document
+//     .querySelectorAll<HTMLImageElement>(
+//       'a[href][onmouseover] > img[src="imagens/sei_anotacao_pequeno.gif"]',
+//     )
+//     .forEach(analisarAnotacao(false));
+// }
+// export function analisarMarcadores(linha: HTMLTableRowElement) {
+//   document
+//     .querySelectorAll<HTMLImageElement>('table a[onmouseover] > img[src^="imagens/marcador_"]')
+//     .forEach(img => {
+//       const match = /^imagens\/marcador_(.*)\.png$/.exec(img.getAttribute('src')!);
+//       if (!match) throw new Error();
+//       const [, cor] = match;
+//       const mouseover = img.parentElement!.getAttribute('onmouseover')!;
+//       const match2 = /^return infraTooltipMostrar\('(.*)','(.+)'\);$/.exec(mouseover);
+//       if (!match2) throw new Error();
+//       const [, text, title] = match2;
+//       escreverColunaAdicionalMarcador(
+//         img,
+//         `<div class="marcador" data-cor="${cor}">${corrigirHTML(title)}</div>`,
+//       );
+//       if (text !== '') {
+//         escreverColunaAdicionalMarcador(
+//           img,
+//           `<div class="marcadorTexto">${corrigirHTML(text)}</div>`,
+//         );
+//       }
+//       img.classList.add('iconeMarcador');
+//     });
+// }

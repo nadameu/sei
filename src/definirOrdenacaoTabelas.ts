@@ -91,6 +91,6 @@ export function definirOrdenacaoTabelas(ordenacao: number, agrupar: boolean) {
       informacoes.reverse();
     }
 
-    tabela.tBodies[0].append(...informacoes.map(x => x.elemento));
+    tabela.tBodies[0].append(...informacoes.map(x => x.linha));
   });
 }
