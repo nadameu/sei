@@ -27,8 +27,8 @@ th.colAdicional, td.colAdicional, th.colAdicionalMarcador, td.colAdicionalMarcad
 .mostrarMarcadores .iconeMarcador { display: none; }
 .mostrarMarcadores .colAdicionalMarcador { display: table-cell; }
 .ocultarCores tr { background: none !important; }
-.ocultarFieldset fieldset > * { display: none; }
-.ocultarFieldset fieldset legend { display: inherit; }
+.ocultarFieldset fieldset > div { display: none; }
+/* .ocultarFieldset fieldset legend { display: inherit; } */
 
 div.marcador, tr.infraTrAcessada div.marcador { padding: 1px; border: 1px solid black; border-radius: 4px; color: white; }
 `;

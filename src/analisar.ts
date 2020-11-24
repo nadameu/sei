@@ -16,6 +16,7 @@ export function analisarPagina(): Pagina {
 }
 
 export function analisarTabela(tabela: HTMLTableElement): Tabela {
+  if (tabela.tBodies.length !== 1) throw new Error('Erro ao analisar tabela.');
   const cabecalho = tabela.rows[0];
   const err = () => {
     throw new Error('Erro ao analisar cabeçalho.');
@@ -26,7 +27,7 @@ export function analisarTabela(tabela: HTMLTableElement): Tabela {
   if (cabecalho.cells.length !== 2) err();
   if (cabecalho.cells[1].colSpan !== 3) err();
   const linhasProcessos = Array.from(tabela.rows).slice(1);
-  return { cabecalho, processos: linhasProcessos.map(analisarLinha) };
+  return { elemento: tabela, cabecalho, processos: linhasProcessos.map(analisarLinha) };
 }
 
 function analisarTooltipLinkComMouseover(

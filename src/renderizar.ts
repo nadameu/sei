@@ -1,4 +1,3 @@
-import { getLineAndCharacterOfPosition } from 'typescript';
 import { Acao } from './Acao';
 import { adicionarEstilos } from './adicionarEstilos';
 import {
@@ -6,6 +5,7 @@ import {
   criarColunasAdicionaisProcesso,
 } from './criarColunaAdicional';
 import { criarFormulario } from './criarFormulario';
+import { definirOrdenacaoProcessos } from './definirOrdenacaoTabelas';
 import { obterCor } from './obterCor';
 import { Pagina } from './Pagina';
 import { Preferencias } from './Preferencias';
@@ -29,6 +29,9 @@ export function renderizarPagina(
     }
   }
 
+  let agruparAtual: boolean = undefined as any;
+  let ordemAtual: number = undefined as any;
+
   atualizar(preferencias);
   return atualizar;
 
@@ -43,5 +46,14 @@ export function renderizarPagina(
       document.body.classList.toggle(campo, preferencias[campo]);
     }
     document.body.classList.toggle('ocultarCores', !preferencias.mostrarCores);
+    if (
+      preferencias.agruparMarcadores !== agruparAtual ||
+      preferencias.ordemTabelas !== ordemAtual
+    ) {
+      agruparAtual = preferencias.agruparMarcadores;
+      ordemAtual = preferencias.ordemTabelas;
+      for (const tabela of pagina.tabelas)
+        definirOrdenacaoProcessos(tabela, ordemAtual, agruparAtual);
+    }
   }
 }

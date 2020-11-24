@@ -15,13 +15,8 @@ export function criarFormulario({
   preferencias: Preferencias;
   dispatch: (acao: Acao) => void;
 }) {
-  const legend = document.createElement('legend');
-  legend.style.fontSize = '1em';
-  legend.appendChild(criarCheckbox('Ocultar preferências', 'ocultarFieldset'));
-  const fieldset = document.createElement('fieldset');
-  fieldset.className = 'infraFieldset ml-0  pl-0 d-none  d-md-block  col-12 col-md-12';
-  fieldset.append(
-    legend,
+  const div = document.createElement('div');
+  div.append(
     criarCheckbox('Mostrar tipo e especificação dos processos', 'mostrarTipo'),
     document.createElement('br'),
     criarCheckbox('Mostrar anotações dos processos', 'mostrarAnotacoes'),
@@ -34,6 +29,14 @@ export function criarFormulario({
     document.createElement('br'),
     criarSelectOrdenacao(preferencias.ordemTabelas, dispatch),
   );
+
+  const legend = document.createElement('legend');
+  legend.style.fontSize = '1em';
+  legend.appendChild(criarCheckbox('Ocultar preferências', 'ocultarFieldset'));
+
+  const fieldset = document.createElement('fieldset');
+  fieldset.className = 'infraFieldset ml-0  pl-0 d-none  d-md-block  col-12 col-md-12';
+  fieldset.append(legend, div);
 
   divRecebidos.insertAdjacentElement('beforebegin', fieldset);
 
