@@ -10,8 +10,6 @@ import { obterCor } from './obterCor';
 import { Pagina } from './Pagina';
 import { Preferencias } from './Preferencias';
 
-// return infraTooltipMostrar\('(.*)','(.+)'\);
-
 declare function infraTooltipMostrar(texto: string, titulo: string): boolean;
 
 export function renderizarPagina(

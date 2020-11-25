@@ -1,5 +1,3 @@
-import { TypeOfExpression } from 'typescript';
-
 export const Ordenacao = {
   PADRAO: 0,
   NUMERO: 1,

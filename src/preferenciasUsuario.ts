@@ -11,20 +11,6 @@ export function getSetInt(name: string, value?: number) {
   return Number(getValue(name, '0'));
 }
 
-// export const usuarioDesejaMostrarTipo = getSetBoolean('mostrarTipo');
-
-// export const usuarioDesejaMostrarAnotacoes = getSetBoolean('mostrarAnotacoes');
-
-// export const usuarioDesejaMostrarCores = getSetBoolean('mostrarCores');
-
-// export const usuarioDesejaMostrarMarcadores = getSetBoolean('mostrarMarcadores');
-
-// export const usuarioDesejaOrdenarTabelas = getSetInt('ordenarTabelas');
-
-// export const usuarioDesejaAgruparMarcadores = getSetBoolean('agruparMarcadores');
-
-// export const usuarioDesejaOcultarFieldset = getSetBoolean('ocultarFieldset');
-
 function getValue(name: string, defaultValue: string) {
   const value = localStorage.getItem(name);
   return value ?? defaultValue;
