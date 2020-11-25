@@ -3,7 +3,7 @@
 // @namespace   http://nadameu.com.br/sei
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
 // @include     https://sei.trf4.jus.br/controlador.php?*
-// @version     13.0.0
+// @version     13.0.1
 // ==/UserScript==
     
 const CoresMarcadores = [
@@ -269,7 +269,7 @@ function criarDivAnotacao(anotacao) {
     if (!anotacao)
         return '';
     const classes = ['anotacao'].concat(anotacao.prioridade ? ['prioridade'] : []);
-    return `<div class="${classes.join(' ')}><a href="${anotacao.url}"><img src="${anotacao.src}"></a> ${corrigirHTML(anotacao.texto)} (${corrigirHTML(anotacao.usuario)})</div>`;
+    return `<div class="${classes.join(' ')}"><a href="${anotacao.url}"><img src="${anotacao.src}"></a> ${corrigirHTML(anotacao.texto)} (${corrigirHTML(anotacao.usuario)})</div>`;
 }
 
 const Acao = {

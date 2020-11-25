@@ -54,7 +54,7 @@ function criarDivEspecificacao(especificacao?: string) {
 function criarDivAnotacao(anotacao?: Anotacao) {
   if (!anotacao) return '';
   const classes = ['anotacao'].concat(anotacao.prioridade ? ['prioridade'] : []);
-  return `<div class="${classes.join(' ')}><a href="${anotacao.url}"><img src="${
+  return `<div class="${classes.join(' ')}"><a href="${anotacao.url}"><img src="${
     anotacao.src
   }"></a> ${corrigirHTML(anotacao.texto)} (${corrigirHTML(anotacao.usuario)})</div>`;
 }
