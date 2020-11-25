@@ -1,3 +1,4 @@
+import pkg from './package.json';
 import typescript from '@rollup/plugin-typescript';
 import ts from 'typescript';
 
@@ -12,7 +13,7 @@ const options = {
 // @namespace   http://nadameu.com.br/sei
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
 // @include     https://sei.trf4.jus.br/controlador.php?*
-// @version     12.1.0
+// @version     ${pkg.version}
 // ==/UserScript==
     `,
   },

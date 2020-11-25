@@ -3,47 +3,9 @@
 // @namespace   http://nadameu.com.br/sei
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
 // @include     https://sei.trf4.jus.br/controlador.php?*
-// @version     12.1.0
+// @version     13.0.0
 // ==/UserScript==
     
-/*! *****************************************************************************
-Copyright (c) Microsoft Corporation.
-
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-***************************************************************************** */
-
-function __awaiter(thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-}
-
-// https://www.w3.org/TR/WCAG20-TECHS/G18.html#G18-tests
-const luminance = (hex) => {
-    const [r, g, b] = hex
-        .match(/^([a-f0-9]{2})([a-f0-9]{2})([a-f0-9]{2})$/)
-        .slice(1)
-        .map(x => parseInt(x, 16))
-        .map(x => x / 255)
-        .map(x => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)));
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
-const whiteLuminance = 1;
-const contrastRatio = (hex) => (whiteLuminance + 0.05) / (luminance(hex) + 0.05);
-const isContrastEnough = (hex) => contrastRatio(hex) >= 4.5;
 const CoresMarcadores = [
     { cor: 'amarelo', hex: 'fff200' },
     { cor: 'amarelo_claro', hex: 'dde134' },
@@ -78,12 +40,151 @@ const CoresMarcadores = [
     { cor: 'vermelho', hex: 'ed1c24' },
     { cor: 'vinho', hex: '633039' },
 ].map(({ cor, hex }) => ({ cor, hex, inverterTexto: !isContrastEnough(hex) }));
-
-function criarElementoEstilo(text) {
-    const style = document.createElement('style');
-    style.textContent = text;
-    document.head.appendChild(style);
+// https://www.w3.org/TR/WCAG20-TECHS/G18.html#G18-tests
+function luminance(hex) {
+    const [r, g, b] = hex
+        .match(/^([a-f0-9]{2})([a-f0-9]{2})([a-f0-9]{2})$/)
+        .slice(1)
+        .map(x => parseInt(x, 16))
+        .map(x => x / 255)
+        .map(x => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
+function contrastRatio(hex) {
+    return 1.05 / (luminance(hex) + 0.05);
+}
+function isContrastEnough(hex) {
+    return contrastRatio(hex) >= 4.5;
+}
+
+function analisarPagina() {
+    const tabelas = document.querySelectorAll('table.tabelaControle');
+    if (tabelas.length !== 2)
+        throw new Error(`Número inesperado de tabelas: ${tabelas.length}.`);
+    const infoTabelas = Array.from(tabelas, analisarTabela);
+    const divRecebidos = document.querySelector('div#divRecebidos');
+    if (!divRecebidos)
+        throw new Error('Elemento não encontrado: "#divRecebidos".');
+    return { divRecebidos, tabelas: infoTabelas };
+}
+function analisarTabela(tabela) {
+    if (tabela.tBodies.length !== 1)
+        throw new Error('Erro ao analisar tabela.');
+    const cabecalho = tabela.rows[0];
+    const err = () => {
+        throw new Error('Erro ao analisar cabeçalho.');
+    };
+    if (!cabecalho)
+        err();
+    const celulasCabecalho = Array.from(cabecalho.cells);
+    if (!celulasCabecalho.every(x => x.matches('th')))
+        err();
+    if (cabecalho.cells.length !== 2)
+        err();
+    if (cabecalho.cells[1].colSpan !== 3)
+        err();
+    const linhasProcessos = Array.from(tabela.rows).slice(1);
+    return { elemento: tabela, cabecalho, processos: linhasProcessos.map(analisarLinha) };
+}
+function analisarTooltipLinkComMouseover(link) {
+    const match = link
+        .getAttribute('onmouseover')
+        .match(/^return infraTooltipMostrar\('(.*)','(.+)'\);$/);
+    if (!match)
+        throw new Error('Erro ao analisar tooltip.');
+    const [, texto, titulo] = match;
+    return { titulo, texto: texto || undefined };
+}
+function analisarLinha(linha, ordemOriginal) {
+    if (linha.cells.length !== 4)
+        throw new Error(`Número inesperado de células: ${linha.cells.length}.`);
+    const linkProcesso = linha.cells[2].querySelector('a[href^="controlador.php?acao=procedimento_trabalhar&"][onmouseover]');
+    if (!linkProcesso)
+        throw new Error('Link do processo não encontrado.');
+    const numeroFormatado = linkProcesso.textContent;
+    if (!numeroFormatado)
+        throw new Error('Número do processo não encontrado.');
+    const numero = analisarNumeroFormatado(numeroFormatado);
+    const { titulo: tipo, texto: especificacao } = analisarTooltipLinkComMouseover(linkProcesso);
+    const imgAnotacao = linha.cells[1].querySelector([1, 2].map(n => `a[href][onmouseover] > img[src^="svg/anotacao${n}\.svg"]`).join(', '));
+    const anotacao = imgAnotacao ? analisarAnotacao(imgAnotacao) : undefined;
+    const imgMarcador = linha.cells[1].querySelector(CoresMarcadores.map(({ cor }) => `a[href][onmouseover] > img[src^="svg/marcador_${cor}.svg"]`).join(', '));
+    const marcador = imgMarcador ? analisarMarcador(imgMarcador) : undefined;
+    return {
+        linha,
+        link: linkProcesso,
+        ordemOriginal,
+        numero,
+        tipo,
+        especificacao,
+        anotacao,
+        marcador,
+    };
+}
+function analisarNumeroFormatado(numeroFormatado) {
+    const textoNumero = numeroFormatado.replace(/[\.-]/g, '');
+    let ano, ordinal, local;
+    if (textoNumero.length === 20) {
+        ano = Number(textoNumero.substr(9, 4));
+        ordinal = Number(textoNumero.substr(0, 7));
+        local = Number(textoNumero.substr(16, 4));
+    }
+    else if (textoNumero.length === 13) {
+        ano = 2000 + Number(textoNumero.substr(0, 2));
+        ordinal = Number(textoNumero.substr(3, 9));
+        local = Number(textoNumero.substr(2, 1));
+    }
+    else {
+        throw new Error(`Tipo de número desconhecido: ${numeroFormatado}.`);
+    }
+    return ano * 1000000000 + ordinal + local / 10000;
+}
+function analisarAnotacao(imgAnotacao) {
+    const link = imgAnotacao.parentElement;
+    const { titulo: usuario, texto } = analisarTooltipLinkComMouseover(link);
+    if (!texto)
+        throw new Error('Erro ao analisar tooltip.');
+    const prioridade = /^svg\/anotacao2\.svg/.test(imgAnotacao.getAttribute('src'));
+    return { texto, usuario, prioridade, imagem: imgAnotacao, src: imgAnotacao.src, url: link.href };
+}
+function analisarMarcador(imgMarcador) {
+    const link = imgMarcador.parentElement;
+    const { titulo: nome, texto } = analisarTooltipLinkComMouseover(link);
+    const cor = imgMarcador.getAttribute('src').match(/^svg\/marcador_(.*)\.svg/)[1];
+    return { imagem: imgMarcador, nome, cor, texto: texto || undefined };
+}
+
+function getSetBoolean(name, value) {
+    if (typeof value === 'boolean')
+        setValue(name, value ? 'S' : 'N');
+    return getValue(name, 'N') === 'S';
+}
+function getSetInt(name, value) {
+    if (typeof value === 'number' && Number.isInteger(value))
+        setValue(name, value.toString());
+    else if (value !== undefined)
+        throw new Error(`Valor inválido para "${name}": "${value}"`);
+    return Number(getValue(name, '0'));
+}
+function getValue(name, defaultValue) {
+    const value = localStorage.getItem(name);
+    return value !== null && value !== void 0 ? value : defaultValue;
+}
+function setValue(name, value) {
+    localStorage.setItem(name, value);
+}
+function obterPreferencias() {
+    return {
+        ocultarFieldset: getSetBoolean('ocultarFieldset'),
+        mostrarTipo: getSetBoolean('mostrarTipo'),
+        mostrarAnotacoes: getSetBoolean('mostrarAnotacoes'),
+        mostrarCores: getSetBoolean('mostrarCores'),
+        mostrarMarcadores: getSetBoolean('mostrarMarcadores'),
+        agruparMarcadores: getSetBoolean('agruparMarcadores'),
+        ordemTabelas: getSetInt('ordemTabelas'),
+    };
+}
+
 function adicionarEstilos() {
     const styles = `
 table.tabelaControle { border-collapse: collapse; }
@@ -96,7 +197,7 @@ div.tipo { font-weight: bold; }
 div.marcador { text-align: center; font-weight: bold; }
 td.colAdicionalMarcador img { float: left; padding-right: 1ex; }
 
-.colAdicional, .colAdicionalMarcador, .anotacao, .tipo, .especificacao, .ambos { display: none; }
+th.colAdicional, td.colAdicional, th.colAdicionalMarcador, td.colAdicionalMarcador, .anotacao, .tipo, .especificacao, .ambos { display: none; }
 .mostrarAnotacoes .colAdicional, .mostrarTipo .colAdicional { display: table-cell; }
 .mostrarAnotacoes .anotacao { display: block; }
 .mostrarAnotacoes .iconeAnotacao { display: none; }
@@ -105,8 +206,8 @@ td.colAdicionalMarcador img { float: left; padding-right: 1ex; }
 .mostrarMarcadores .iconeMarcador { display: none; }
 .mostrarMarcadores .colAdicionalMarcador { display: table-cell; }
 .ocultarCores tr { background: none !important; }
-.ocultarFieldset fieldset > * { display: none; }
-.ocultarFieldset fieldset legend { display: inherit; }
+.ocultarFieldset fieldset > div { display: none; }
+/* .ocultarFieldset fieldset legend { display: inherit; } */
 
 div.marcador, tr.infraTrAcessada div.marcador { padding: 1px; border: 1px solid black; border-radius: 4px; color: white; }
 `;
@@ -116,30 +217,65 @@ div.marcador[data-cor="${cor}"], tr.infraTrAcessada div.marcador[data-cor="${cor
   background-color: #${hex};
   ${inverterTexto ? 'color: black;' : ''}
 }`);
-    criarElementoEstilo([styles].concat(cores).join('\n'));
+    const style = document.createElement('style');
+    style.textContent = [styles].concat(cores).join('\n');
+    document.head.appendChild(style);
 }
 
-const toggleBodyClass = (className) => (active) => {
-    document.body.classList.toggle(className, active);
+function corrigirHTML(texto) {
+    return texto
+        .replace(/\\r/g, '\r')
+        .replace(/\\n/g, '\n')
+        .replace(/\\&/g, '&')
+        .replace(/\r\n/g, '<br/>');
+}
+
+function criarColunasAdicionaisCabecalho(cabecalho) {
+    const coluna = cabecalho.cells[1];
+    coluna.colSpan = 2;
+    coluna.insertAdjacentHTML('afterend', [
+        '<th class="infraTh tituloControle colAdicionalMarcador">Marcador</th>',
+        '<th class="infraTh tituloControle colAdicional"><span class="tipo">Tipo / Especificação</span><span class="ambos"> / </span><span class="anotacao">Anotações</span></th>',
+        '<th class="infraTh"></th>',
+    ].join(''));
+}
+function criarColunasAdicionaisProcesso(linha, processo) {
+    const coluna = linha.cells[2];
+    coluna.insertAdjacentHTML('afterend', [
+        criarColunaAdicionalMarcador(processo.marcador),
+        '<td class="colAdicional">',
+        criarDivTipo(processo.tipo),
+        criarDivEspecificacao(processo.especificacao),
+        criarDivAnotacao(processo.anotacao),
+        '</td>',
+    ].join(''));
+}
+function criarColunaAdicionalMarcador(marcador) {
+    return [
+        '<td class="colAdicionalMarcador">',
+        marcador
+            ? `<div class="marcador" data-cor="${marcador.cor}">${corrigirHTML(marcador.nome)}</div>${marcador.texto ? `<div class="marcadorTexto">${corrigirHTML(marcador.texto)}</div>` : ''}`
+            : '',
+        '</td>',
+    ].join('');
+}
+function criarDivTipo(tipo) {
+    return `<div class="tipo">${corrigirHTML(tipo)}</div>`;
+}
+function criarDivEspecificacao(especificacao) {
+    return especificacao ? `<div class="especificacao">${corrigirHTML(especificacao)}</div>` : '';
+}
+function criarDivAnotacao(anotacao) {
+    if (!anotacao)
+        return '';
+    const classes = ['anotacao'].concat(anotacao.prioridade ? ['prioridade'] : []);
+    return `<div class="${classes.join(' ')}><a href="${anotacao.url}"><img src="${anotacao.src}"></a> ${corrigirHTML(anotacao.texto)} (${corrigirHTML(anotacao.usuario)})</div>`;
+}
+
+const Acao = {
+    setBool: (nome, valor) => ({ tipo: 'setBool', nome, valor }),
+    setOrdenacao: (valor) => ({ tipo: 'setOrdenacao', valor }),
 };
-const alternarOcultacaoFieldset = toggleBodyClass('ocultarFieldset');
-function alternarExibicaoTipo(exibir) {
-    toggleBodyClass('mostrarTipo')(exibir);
-    document
-        .querySelectorAll('a[href^="controlador.php?acao=procedimento_trabalhar"]')
-        .forEach(exibir
-        ? link => {
-            link.setAttribute('onmouseover', `return; ${link.getAttribute('onmouseover') || ''}`);
-        }
-        : link => {
-            link.setAttribute('onmouseover', (link.getAttribute('onmouseover') || '').replace(/^return; /, ''));
-        });
-}
-const alternarExibicaoAnotacoes = toggleBodyClass('mostrarAnotacoes');
-const alternarExibicaoMarcadores = toggleBodyClass('mostrarMarcadores');
-function alternarExibicaoCores(exibir) {
-    toggleBodyClass('ocultarCores')(!exibir);
-}
 
 const Ordenacao = {
     PADRAO: 0,
@@ -150,157 +286,34 @@ const Ordenacao = {
     PRIORITARIOS: 8,
 };
 
-const getSetBoolean = (name) => (value) => {
-    if (typeof value === 'boolean')
-        setValue(name, value ? 'S' : 'N');
-    return getValue(name, 'N') === 'S';
-};
-const getSetInt = (name) => (value) => {
-    if (typeof value === 'number' && Number.isInteger(value))
-        setValue(name, value.toString());
-    else if (value !== undefined)
-        throw new Error(`Valor inválido para "${name}": "${value}"`);
-    return Number(getValue(name, '0'));
-};
-const usuarioDesejaMostrarTipo = getSetBoolean('mostrarTipo');
-const usuarioDesejaMostrarAnotacoes = getSetBoolean('mostrarAnotacoes');
-const usuarioDesejaMostrarCores = getSetBoolean('mostrarCores');
-const usuarioDesejaMostrarMarcadores = getSetBoolean('mostrarMarcadores');
-const usuarioDesejaOrdenarTabelas = getSetInt('ordenarTabelas');
-const usuarioDesejaAgruparMarcadores = getSetBoolean('agruparMarcadores');
-const usuarioDesejaOcultarFieldset = getSetBoolean('ocultarFieldset');
-function getValue(name, defaultValue) {
-    const value = localStorage.getItem(name);
-    return value !== null && value !== void 0 ? value : defaultValue;
+function criarFormulario({ divRecebidos, preferencias, dispatch, }) {
+    const div = document.createElement('div');
+    div.append(criarCheckbox('Mostrar tipo e especificação dos processos', 'mostrarTipo'), document.createElement('br'), criarCheckbox('Mostrar anotações dos processos', 'mostrarAnotacoes'), document.createElement('br'), criarCheckbox('Mostrar cores conforme tipo de processo', 'mostrarCores'), document.createElement('br'), criarCheckbox('Mostrar texto dos marcadores dos processos', 'mostrarMarcadores'), document.createElement('br'), criarCheckbox('Agrupar processos por marcador', 'agruparMarcadores'), document.createElement('br'), criarSelectOrdenacao(preferencias.ordemTabelas, dispatch));
+    const legend = document.createElement('legend');
+    legend.style.fontSize = '1em';
+    legend.appendChild(criarCheckbox('Ocultar preferências', 'ocultarFieldset'));
+    const fieldset = document.createElement('fieldset');
+    fieldset.className = 'infraFieldset ml-0  pl-0 d-none  d-md-block  col-12 col-md-12';
+    fieldset.append(legend, div);
+    divRecebidos.insertAdjacentElement('beforebegin', fieldset);
+    function criarCheckbox(texto, preferencia) {
+        const id = `gmSeiChkBox${preferencia}`;
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.className = 'infraCheckbox';
+        input.id = id;
+        input.checked = preferencias[preferencia];
+        input.addEventListener('change', () => dispatch(Acao.setBool(preferencia, input.checked)));
+        const label = document.createElement('label');
+        label.className = 'infraLabelOpcional';
+        label.htmlFor = id;
+        label.textContent = ` ${texto}`;
+        const fragmento = document.createDocumentFragment();
+        fragmento.append(input, label);
+        return fragmento;
+    }
 }
-function setValue(name, value) {
-    localStorage.setItem(name, value);
-}
-
-const Ordering = { LT: -1, EQ: 0, GT: +1 };
-function altOrdering(...fns) {
-    return (a, b) => {
-        let result = Ordering.EQ;
-        for (const fn of fns) {
-            result = fn(a, b);
-            if (result !== Ordering.EQ)
-                break;
-        }
-        return result;
-    };
-}
-const compareDefault = (a, b) => {
-    return a < b ? Ordering.LT : a > b ? Ordering.GT : Ordering.EQ;
-};
-function compareUsing(f) {
-    return (a, b) => compareDefault(f(a), f(b));
-}
-
-function gerarFuncaoOrdenarPorMarcador(fnOrdenacao, inverter) {
-    return (a, b) => {
-        let textoA = a.marcador === '' ? 'zz' : a.marcador;
-        let textoB = b.marcador === '' ? 'zz' : b.marcador;
-        if (inverter) {
-            [textoB, textoA] = [textoA, textoB];
-        }
-        return textoA < textoB ? Ordering.LT : textoA > textoB ? Ordering.GT : fnOrdenacao(a, b);
-    };
-}
-const ordenarPorOrdemPadrao = compareUsing(x => x.ordemOriginal);
-const ordenarPorAnotacao = altOrdering(compareUsing(x => (x.anotacao === '' ? 'zz' : x.anotacao)), ordenarPorOrdemPadrao);
-const ordenarPorAnotacaoPrioritariosPrimeiro = altOrdering(compareUsing(x => `${x.prioridade === '' ? 'zz' : x.prioridade}${x.anotacao === '' ? 'zz' : x.anotacao}`), ordenarPorOrdemPadrao);
-const ordenarPorNumero = compareUsing(x => x.numero);
-const ordenarPorTipoEspecificacaoAnotacao = altOrdering(compareUsing(({ tipo, especificacao, anotacao }) => `${tipo}${especificacao}${anotacao}`), ordenarPorOrdemPadrao);
-
-function definirOrdenacaoTabelas(ordenacao, agrupar) {
-    document.querySelectorAll('table.tabelaControle').forEach(tabela => {
-        const linhas = tabela.querySelectorAll('tr[id]');
-        const informacoes = [];
-        linhas.forEach((linha, l) => {
-            const links = linha.querySelectorAll('a[href^="controlador.php?acao=procedimento_trabalhar&"]');
-            links.forEach(link => {
-                if (!link.getAttribute('data-ordem-original')) {
-                    link.setAttribute('data-ordem-original', String(l));
-                }
-            });
-            const linksAlterados = linha.querySelectorAll('a[data-ordem-original]');
-            if (linksAlterados.length === 0)
-                throw new Error('Link do processo não encontrado.');
-            const link = linksAlterados[0];
-            const numeroFormatado = link.textContent;
-            if (!numeroFormatado)
-                throw new Error('Número do processo não encontrado.');
-            const textoNumero = numeroFormatado.replace(/[\.-]/g, '');
-            let ano, ordinal, local;
-            if (textoNumero.length === 20) {
-                ano = Number(textoNumero.substr(9, 4));
-                ordinal = Number(textoNumero.substr(0, 7));
-                local = Number(textoNumero.substr(16, 4));
-            }
-            else if (textoNumero.length === 13) {
-                ano = 2000 + Number(textoNumero.substr(0, 2));
-                ordinal = Number(textoNumero.substr(3, 9));
-                local = Number(textoNumero.substr(2, 1));
-            }
-            else {
-                throw new Error(`Tipo de número desconhecido: ${numeroFormatado}.`);
-            }
-            const numero = ano * 1000000000 + ordinal + local / 10000;
-            const campos = ['tipo', 'especificacao', 'anotacao', 'prioridade', 'marcador'];
-            const informacao = campos.reduce((obj, dado) => {
-                var _a, _b;
-                const texto = (_b = (_a = linha.querySelectorAll(`.${dado}`)[0]) === null || _a === void 0 ? void 0 : _a.textContent) !== null && _b !== void 0 ? _b : '';
-                return Object.assign(Object.assign({}, obj), { [dado]: texto.toLocaleLowerCase() });
-            }, {
-                elemento: linha,
-                numero,
-                ordemOriginal: Number(link.getAttribute('data-ordem-original')),
-            });
-            informacoes.push(informacao);
-        });
-        let funcaoOrdenacao;
-        switch (ordenacao & 3) {
-            case Ordenacao.ANOTACAO:
-                if (ordenacao & Ordenacao.PRIORITARIOS) {
-                    funcaoOrdenacao = ordenarPorAnotacaoPrioritariosPrimeiro;
-                }
-                else {
-                    funcaoOrdenacao = ordenarPorAnotacao;
-                }
-                break;
-            case Ordenacao.TIPO:
-                funcaoOrdenacao = ordenarPorTipoEspecificacaoAnotacao;
-                break;
-            case Ordenacao.NUMERO:
-                funcaoOrdenacao = ordenarPorNumero;
-                break;
-            case Ordenacao.PADRAO:
-            default:
-                funcaoOrdenacao = ordenarPorOrdemPadrao;
-                break;
-        }
-        if (agrupar) {
-            informacoes.sort(gerarFuncaoOrdenarPorMarcador(funcaoOrdenacao, (ordenacao & Ordenacao.INVERTER) > 0));
-        }
-        else {
-            informacoes.sort(funcaoOrdenacao);
-        }
-        if (ordenacao & Ordenacao.INVERTER) {
-            informacoes.reverse();
-        }
-        tabela.tBodies[0].append(...informacoes.map(x => x.elemento));
-    });
-}
-
-const criarCheckboxBoolean = (texto, fnPreferencia, fnAlternarExibicao) => () => criarCheckbox(texto, fnPreferencia(), chkbox => {
-    fnPreferencia(chkbox.checked);
-    fnAlternarExibicao(chkbox.checked);
-});
-const criarCheckboxTipo = criarCheckboxBoolean('Mostrar tipo e especificação dos processos', usuarioDesejaMostrarTipo, alternarExibicaoTipo);
-const criarCheckboxAnotacoes = criarCheckboxBoolean('Mostrar anotações dos processos', usuarioDesejaMostrarAnotacoes, alternarExibicaoAnotacoes);
-const criarCheckboxMarcadores = criarCheckboxBoolean('Mostrar texto dos marcadores dos processos', usuarioDesejaMostrarMarcadores, alternarExibicaoMarcadores);
-const criarCheckboxCor = criarCheckboxBoolean('Mostrar cores conforme tipo de processo', usuarioDesejaMostrarCores, alternarExibicaoCores);
-function criarSelectOrdenacao() {
+function criarSelectOrdenacao(valor, dispatch) {
     const select = document.createElement('select');
     select.style.display = 'inline-block';
     select.style.fontSize = '1em';
@@ -317,109 +330,86 @@ function criarSelectOrdenacao() {
     ];
     const options = campos.map(({ nome, valor }) => `<option value="${valor}">${nome}</option>`);
     select.insertAdjacentHTML('beforeend', options.join(''));
-    select.value = String(usuarioDesejaOrdenarTabelas());
+    select.value = String(valor);
     const label = document.createElement('label');
     label.className = 'infraLabelOpcional';
     label.append('Ordenação dos processos: ', select);
     select.addEventListener('change', () => {
         const valor = Number(select.value);
-        usuarioDesejaOrdenarTabelas(valor);
-        definirOrdenacaoTabelas(valor, usuarioDesejaAgruparMarcadores());
+        dispatch(Acao.setOrdenacao(valor));
     });
     return label;
 }
-function criarCheckboxAgruparMarcadores() {
-    return criarCheckbox('Agrupar processos por marcador', usuarioDesejaAgruparMarcadores(), chkbox => {
-        usuarioDesejaAgruparMarcadores(chkbox.checked);
-        definirOrdenacaoTabelas(usuarioDesejaOrdenarTabelas(), chkbox.checked);
-    });
-}
-function criarFormulario({ divRecebidos }) {
-    const legend = document.createElement('legend');
-    legend.style.fontSize = '1em';
-    legend.appendChild(criarCheckbox('Ocultar preferências', usuarioDesejaOcultarFieldset(), chkbox => {
-        usuarioDesejaOcultarFieldset(chkbox.checked);
-        alternarOcultacaoFieldset(chkbox.checked);
-    }));
-    const fieldset = document.createElement('fieldset');
-    fieldset.className = 'infraFieldset';
-    fieldset.append(legend, criarCheckboxTipo(), document.createElement('br'), criarCheckboxAnotacoes(), document.createElement('br'), criarCheckboxCor(), document.createElement('br'), criarCheckboxMarcadores(), document.createElement('br'), criarCheckboxAgruparMarcadores(), document.createElement('br'), criarSelectOrdenacao());
-    divRecebidos.insertAdjacentElement('beforebegin', fieldset);
-}
-function criarCheckbox(texto, checked, handler) {
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.className = 'infraCheckbox';
-    input.checked = checked;
-    const label = document.createElement('label');
-    label.className = 'infraLabelOpcional';
-    label.append(input, ` ${texto}`);
-    input.addEventListener('change', () => handler(input));
-    return label;
-}
 
-function corrigirHTML(texto) {
-    return texto
-        .replace(/\\r/g, '\r')
-        .replace(/\\n/g, '\n')
-        .replace(/\\&/g, '&')
-        .replace(/\r\n/g, '<br/>');
-}
-
-const makeCriarColunaAdicional = (htmlCelulaCabecalho, htmlCelulaCorpo) => (tabela) => {
-    tabela.querySelectorAll('tr').forEach(linha => {
-        const terceiro = linha.querySelector('th:nth-child(3), td:nth-child(3)');
-        if (!terceiro)
-            throw new Error('Linha não possui colunas suficientes.');
-        if (terceiro.matches('th')) {
-            terceiro.insertAdjacentHTML('afterend', htmlCelulaCabecalho);
+const Ordering = { LT: -1, EQ: 0, GT: +1 };
+function altOrdering(...fns) {
+    return (a, b) => {
+        let result = Ordering.EQ;
+        for (const fn of fns) {
+            result = fn(a, b);
+            if (result !== Ordering.EQ)
+                break;
         }
-        else {
-            terceiro.insertAdjacentHTML('afterend', htmlCelulaCorpo);
-        }
-    });
-};
-const criarColunaAdicional = makeCriarColunaAdicional('<th class="tituloControle colAdicional"><span class="tipo">Tipo / Especificação</span><span class="ambos"> / </span><span class="anotacao">Anotações</span></th>', '<td class="colAdicional"></td>');
-const criarColunaAdicionalMarcador = makeCriarColunaAdicional('<th class="tituloControle colAdicionalMarcador">Marcador</th>', '<td class="colAdicionalMarcador"></td>');
-
-const obterColunaAdicional = (className, fnCriarColunas) => (elemento) => {
-    const linha = elemento.closest('tr');
-    if (!linha)
-        throw new Error('Elemento não está contido em uma linha.');
-    const go = (criadas = false) => {
-        const colunas = linha.querySelectorAll(`td.${className}`);
-        if (colunas.length > 0)
-            return colunas[0];
-        else if (!criadas) {
-            fnCriarColunas();
-            return go(true);
-        }
-        else
-            throw new Error('Erro ao criar colunas adicionais.');
+        return result;
     };
-    return go();
-};
-const makeCriarColunasAdicionais = (fn) => () => document.querySelectorAll('table.tabelaControle').forEach(fn);
-const criarColunasAdicionais = makeCriarColunasAdicionais(criarColunaAdicional);
-const criarColunasAdicionaisMarcador = makeCriarColunasAdicionais(criarColunaAdicionalMarcador);
-const obterColuna = obterColunaAdicional('colAdicional', criarColunasAdicionais);
-const obterColunaMarcador = obterColunaAdicional('colAdicionalMarcador', criarColunasAdicionaisMarcador);
+}
+function compareDefault(a, b) {
+    return a < b ? Ordering.LT : a > b ? Ordering.GT : Ordering.EQ;
+}
+function compareUsing(f) {
+    return (a, b) => compareDefault(f(a), f(b));
+}
 
-const makeEscreverColunaAdicional = (fnObterColuna) => (elemento, html) => {
-    const coluna = fnObterColuna(elemento);
-    coluna.insertAdjacentHTML('beforeend', html);
-};
-const escreverColunaAdicional = makeEscreverColunaAdicional(obterColuna);
-const escreverColunaAdicionalMarcador = makeEscreverColunaAdicional(obterColunaMarcador);
-function escreverColunaAdicionalAnotacao(elemento, html, url, prioridade) {
-    const classes = ['anotacao'];
-    if (prioridade) {
-        classes.push('prioridade');
+function gerarFuncaoOrdenarPorMarcador(fnOrdenacao, inverter) {
+    return altOrdering((a, b) => {
+        var _a, _b, _c, _d;
+        let textoA = (_b = (_a = a.marcador) === null || _a === void 0 ? void 0 : _a.nome.toLocaleLowerCase()) !== null && _b !== void 0 ? _b : 'zz';
+        let textoB = (_d = (_c = b.marcador) === null || _c === void 0 ? void 0 : _c.nome.toLocaleLowerCase()) !== null && _d !== void 0 ? _d : 'zz';
+        if (inverter) {
+            [textoB, textoA] = [textoA, textoB];
+        }
+        return textoA < textoB ? Ordering.LT : textoA > textoB ? Ordering.GT : Ordering.EQ;
+    }, fnOrdenacao);
+}
+const ordenarPorOrdemPadrao = compareUsing(x => x.ordemOriginal);
+const ordenarPorAnotacao = altOrdering(compareUsing(x => { var _a, _b; return (_b = (_a = x.anotacao) === null || _a === void 0 ? void 0 : _a.texto.toLocaleLowerCase()) !== null && _b !== void 0 ? _b : 'zz'; }), ordenarPorOrdemPadrao);
+const ordenarPorAnotacaoPrioritariosPrimeiro = altOrdering(compareUsing(x => { var _a, _b; return (((_b = (_a = x.anotacao) === null || _a === void 0 ? void 0 : _a.prioridade) !== null && _b !== void 0 ? _b : false) ? 'A' : 'B'); }), compareUsing(x => { var _a, _b; return (_b = (_a = x.anotacao) === null || _a === void 0 ? void 0 : _a.texto.toLocaleLowerCase()) !== null && _b !== void 0 ? _b : 'zz'; }), ordenarPorOrdemPadrao);
+const ordenarPorNumero = compareUsing(x => x.numero);
+const ordenarPorTipoEspecificacaoAnotacao = altOrdering(compareUsing(({ tipo, especificacao, anotacao }) => {
+    var _a, _b;
+    return `${tipo.toLocaleLowerCase()}${(_a = especificacao === null || especificacao === void 0 ? void 0 : especificacao.toLocaleLowerCase()) !== null && _a !== void 0 ? _a : 'zz'}${(_b = anotacao === null || anotacao === void 0 ? void 0 : anotacao.texto.toLocaleLowerCase()) !== null && _b !== void 0 ? _b : 'zz'}`;
+}), ordenarPorOrdemPadrao);
+
+function definirOrdenacaoProcessos(tabela, ordenacao, agrupar) {
+    let funcaoOrdenacao;
+    switch (ordenacao & 3) {
+        case Ordenacao.ANOTACAO:
+            if (ordenacao & Ordenacao.PRIORITARIOS) {
+                funcaoOrdenacao = ordenarPorAnotacaoPrioritariosPrimeiro;
+            }
+            else {
+                funcaoOrdenacao = ordenarPorAnotacao;
+            }
+            break;
+        case Ordenacao.TIPO:
+            funcaoOrdenacao = ordenarPorTipoEspecificacaoAnotacao;
+            break;
+        case Ordenacao.NUMERO:
+            funcaoOrdenacao = ordenarPorNumero;
+            break;
+        case Ordenacao.PADRAO:
+        default:
+            funcaoOrdenacao = ordenarPorOrdemPadrao;
+            break;
     }
-    const imagem = prioridade
-        ? 'imagens/sei_anotacao_prioridade_pequeno.gif'
-        : 'imagens/sei_anotacao_pequeno.gif';
-    escreverColunaAdicional(elemento, `<div class="${classes.join(' ')}"><a href="${url}"><img src="${imagem}"/></a> ${html}</div>`);
+    if (agrupar)
+        funcaoOrdenacao = gerarFuncaoOrdenarPorMarcador(funcaoOrdenacao, (ordenacao & Ordenacao.INVERTER) > 0);
+    const linhas = tabela.processos
+        .slice()
+        .sort(funcaoOrdenacao)
+        .map(x => x.linha);
+    const linhasOrdenadas = (ordenacao & Ordenacao.INVERTER) > 0 ? linhas.reverse() : linhas;
+    tabela.elemento.tBodies[0].append(...linhasOrdenadas);
 }
 
 function obterCor(texto) {
@@ -433,99 +423,80 @@ function obterCor(texto) {
     return `hsl(${h}, 60%, 85%)`;
 }
 
-function analisarTipo() {
-    document
-        .querySelectorAll('tr a[href^="controlador.php?acao=procedimento_trabalhar"][onmouseover]')
-        .forEach(link => {
-        const mouseover = link.getAttribute('onmouseover');
-        const match = /^return infraTooltipMostrar\('(.*)','(.+)'\);$/.exec(mouseover);
-        if (!match)
-            throw new Error();
-        const [, text, title] = match;
-        escreverColunaAdicional(link, `<div class="tipo">${corrigirHTML(title)}</div>`);
-        if (text !== '') {
-            escreverColunaAdicional(link, `<div class="especificacao">${corrigirHTML(text)}</div>`);
+function renderizarPagina(pagina, preferencias, dispatch) {
+    let mostrarTooltip = !preferencias.mostrarTipo;
+    adicionarEstilos();
+    criarFormulario({ divRecebidos: pagina.divRecebidos, preferencias, dispatch });
+    for (const { cabecalho, processos } of pagina.tabelas) {
+        for (const celula of cabecalho.cells)
+            celula.removeAttribute('width');
+        criarColunasAdicionaisCabecalho(cabecalho);
+        for (const processo of processos) {
+            processo.linha.style.backgroundColor = obterCor(processo.tipo);
+            for (const celula of processo.linha.cells)
+                celula.removeAttribute('width');
+            criarColunasAdicionaisProcesso(processo.linha, processo);
+            processo.link.removeAttribute('onmouseover');
+            processo.link.addEventListener('mouseover', () => {
+                var _a;
+                if (mostrarTooltip)
+                    infraTooltipMostrar((_a = processo.especificacao) !== null && _a !== void 0 ? _a : '', processo.tipo);
+            });
+            if (processo.anotacao)
+                processo.anotacao.imagem.classList.add('iconeAnotacao');
+            if (processo.marcador)
+                processo.marcador.imagem.classList.add('iconeMarcador');
         }
-        const cor = obterCor(title);
-        link.closest('tr').style.background = cor;
-    });
-}
-function analisarAnotacoes() {
-    const analisarAnotacao = (prioridade) => (img) => {
-        const link = img.parentElement;
-        const mouseover = link.getAttribute('onmouseover');
-        const match = /^return infraTooltipMostrar\('(.*)','(.*)'\);$/.exec(mouseover);
-        if (!match)
-            throw new Error();
-        const [, text, user] = match;
-        escreverColunaAdicionalAnotacao(img, `${corrigirHTML(text)} (${corrigirHTML(user)})`, link.getAttribute('href'), prioridade);
-        img.classList.add('iconeAnotacao');
-    };
-    document
-        .querySelectorAll('a[href][onmouseover] > img[src="imagens/sei_anotacao_prioridade_pequeno.gif"]')
-        .forEach(analisarAnotacao(true));
-    document
-        .querySelectorAll('a[href][onmouseover] > img[src="imagens/sei_anotacao_pequeno.gif"]')
-        .forEach(analisarAnotacao(false));
-}
-function analisarMarcadores() {
-    document
-        .querySelectorAll('table a[onmouseover] > img[src^="imagens/marcador_"]')
-        .forEach(img => {
-        const match = /^imagens\/marcador_(.*)\.png$/.exec(img.getAttribute('src'));
-        if (!match)
-            throw new Error();
-        const [, cor] = match;
-        const mouseover = img.parentElement.getAttribute('onmouseover');
-        const match2 = /^return infraTooltipMostrar\('(.*)','(.+)'\);$/.exec(mouseover);
-        if (!match2)
-            throw new Error();
-        const [, text, title] = match2;
-        escreverColunaAdicionalMarcador(img, `<div class="marcador" data-cor="${cor}">${corrigirHTML(title)}</div>`);
-        if (text !== '') {
-            escreverColunaAdicionalMarcador(img, `<div class="marcadorTexto">${corrigirHTML(text)}</div>`);
+    }
+    let agruparAtual = undefined;
+    let ordemAtual = undefined;
+    atualizar(preferencias);
+    return atualizar;
+    function atualizar(preferencias) {
+        mostrarTooltip = !preferencias.mostrarTipo;
+        const campos = [
+            'ocultarFieldset',
+            'mostrarTipo',
+            'mostrarAnotacoes',
+            'mostrarMarcadores',
+        ];
+        for (const campo of campos) {
+            document.body.classList.toggle(campo, preferencias[campo]);
         }
-        img.classList.add('iconeMarcador');
-    });
-}
-
-function modificarTabelas() {
-    analisarTipo();
-    analisarAnotacoes();
-    analisarMarcadores();
-}
-
-function query(selector, parentNode = document) {
-    const element = parentNode.querySelector(selector);
-    return element === null
-        ? Promise.reject(new Error(`Elemento não encontrado: \`${selector}\`.`))
-        : Promise.resolve(element);
-}
-
-function modificarTelaProcessos() {
-    return __awaiter(this, void 0, void 0, function* () {
-        adicionarEstilos();
-        const divRecebidos = yield query('div#divRecebidos');
-        criarFormulario({ divRecebidos });
-        modificarTabelas();
-        alternarExibicaoTipo(usuarioDesejaMostrarTipo());
-        alternarExibicaoAnotacoes(usuarioDesejaMostrarAnotacoes());
-        alternarExibicaoMarcadores(usuarioDesejaMostrarMarcadores());
-        alternarExibicaoCores(usuarioDesejaMostrarCores());
-        definirOrdenacaoTabelas(usuarioDesejaOrdenarTabelas(), usuarioDesejaAgruparMarcadores());
-        alternarOcultacaoFieldset(usuarioDesejaOcultarFieldset());
-    });
+        document.body.classList.toggle('ocultarCores', !preferencias.mostrarCores);
+        if (preferencias.agruparMarcadores !== agruparAtual ||
+            preferencias.ordemTabelas !== ordemAtual) {
+            agruparAtual = preferencias.agruparMarcadores;
+            ordemAtual = preferencias.ordemTabelas;
+            for (const tabela of pagina.tabelas)
+                definirOrdenacaoProcessos(tabela, ordemAtual, agruparAtual);
+        }
+    }
 }
 
 function main() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const params = new URL(document.location.href).searchParams;
-        if (params.get('acao') === 'procedimento_controlar') {
-            yield modificarTelaProcessos();
+    const params = new URL(document.location.href).searchParams;
+    if (params.get('acao') === 'procedimento_controlar') {
+        const pagina = analisarPagina();
+        const preferencias = obterPreferencias();
+        const atualizar = renderizarPagina(pagina, preferencias, dispatch);
+        function dispatch(acao) {
+            switch (acao.tipo) {
+                case 'setBool':
+                    getSetBoolean(acao.nome, acao.valor);
+                    break;
+                case 'setOrdenacao':
+                    getSetInt('ordemTabelas', acao.valor);
+                    break;
+            }
+            atualizar(obterPreferencias());
         }
-    });
+    }
 }
 
-main().catch(err => {
+try {
+    main();
+}
+catch (err) {
     console.error(err);
-});
+}
