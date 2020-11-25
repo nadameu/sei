@@ -15,7 +15,7 @@ export function analisarPagina(): Pagina {
   return { divRecebidos, tabelas: infoTabelas };
 }
 
-export function analisarTabela(tabela: HTMLTableElement): Tabela {
+function analisarTabela(tabela: HTMLTableElement): Tabela {
   if (tabela.tBodies.length !== 1) throw new Error('Erro ao analisar tabela.');
   const cabecalho = tabela.rows[0];
   const err = () => {

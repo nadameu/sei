@@ -1,17 +1,3 @@
-// https://www.w3.org/TR/WCAG20-TECHS/G18.html#G18-tests
-const luminance = (hex: string) => {
-  const [r, g, b] = hex
-    .match(/^([a-f0-9]{2})([a-f0-9]{2})([a-f0-9]{2})$/)!
-    .slice(1)
-    .map(x => parseInt(x, 16))
-    .map(x => x / 255)
-    .map(x => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)));
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
-const whiteLuminance = 1;
-const contrastRatio = (hex: string) => (whiteLuminance + 0.05) / (luminance(hex) + 0.05);
-const isContrastEnough = (hex: string) => contrastRatio(hex) >= 4.5;
-
 export const CoresMarcadores = [
   { cor: 'amarelo', hex: 'fff200' },
   { cor: 'amarelo_claro', hex: 'dde134' },
@@ -46,3 +32,20 @@ export const CoresMarcadores = [
   { cor: 'vermelho', hex: 'ed1c24' },
   { cor: 'vinho', hex: '633039' },
 ].map(({ cor, hex }) => ({ cor, hex, inverterTexto: !isContrastEnough(hex) }));
+
+// https://www.w3.org/TR/WCAG20-TECHS/G18.html#G18-tests
+function luminance(hex: string) {
+  const [r, g, b] = hex
+    .match(/^([a-f0-9]{2})([a-f0-9]{2})([a-f0-9]{2})$/)!
+    .slice(1)
+    .map(x => parseInt(x, 16))
+    .map(x => x / 255)
+    .map(x => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function contrastRatio(hex: string) {
+  return 1.05 / (luminance(hex) + 0.05);
+}
+function isContrastEnough(hex: string) {
+  return contrastRatio(hex) >= 4.5;
+}

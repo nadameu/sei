@@ -14,12 +14,11 @@ export function altOrdering<T>(...fns: Compare<T>[]): Compare<T> {
   };
 }
 
-export const compareDefault: {
-  (a: string, b: string): Ordering;
-  (a: number, b: number): Ordering;
-} = (a: any, b: any) => {
+export function compareDefault(a: string, b: string): Ordering;
+export function compareDefault(a: number, b: number): Ordering;
+export function compareDefault(a: any, b: any) {
   return a < b ? Ordering.LT : a > b ? Ordering.GT : Ordering.EQ;
-};
+}
 
 export function compareUsing<T>(f: (_: T) => string | number): Compare<T> {
   return (a, b) => compareDefault(f(a) as any, f(b) as any);

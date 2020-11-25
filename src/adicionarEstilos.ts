@@ -1,11 +1,5 @@
 import { CoresMarcadores } from './CoresMarcadores';
 
-function criarElementoEstilo(text: string) {
-  const style = document.createElement('style');
-  style.textContent = text;
-  document.head.appendChild(style);
-}
-
 export function adicionarEstilos() {
   const styles = `
 table.tabelaControle { border-collapse: collapse; }
@@ -40,5 +34,8 @@ div.marcador[data-cor="${cor}"], tr.infraTrAcessada div.marcador[data-cor="${cor
   ${inverterTexto ? 'color: black;' : ''}
 }`,
   );
-  criarElementoEstilo([styles].concat(cores).join('\n'));
+
+  const style = document.createElement('style');
+  style.textContent = [styles].concat(cores).join('\n');
+  document.head.appendChild(style);
 }
