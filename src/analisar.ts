@@ -7,10 +7,11 @@ import { Tabela } from './Tabela';
 
 export function analisarPagina(): Pagina {
   const tabelas = document.querySelectorAll<HTMLTableElement>('table.tabelaControle');
-  if (tabelas.length !== 2) throw new Error(`Número inesperado de tabelas: ${tabelas.length}.`);
+  if (tabelas.length < 1 || tabelas.length > 2)
+    throw new Error(`Número inesperado de tabelas: ${tabelas.length}.`);
   const infoTabelas = Array.from(tabelas, analisarTabela);
-  const divRecebidos = document.querySelector<HTMLDivElement>('div#divRecebidos');
-  if (!divRecebidos) throw new Error('Elemento não encontrado: "#divRecebidos".');
+  const divRecebidos = document.querySelector<HTMLDivElement>('div#divRecebidos, div#divGerados');
+  if (!divRecebidos) throw new Error('Elemento não encontrado: "#divRecebidos" | "#divGerados.');
 
   return { divRecebidos, tabelas: infoTabelas };
 }

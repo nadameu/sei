@@ -3,7 +3,7 @@
 // @namespace   http://nadameu.com.br/sei
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
 // @include     https://sei.trf4.jus.br/controlador.php?*
-// @version     13.0.3
+// @version     13.0.4
 // ==/UserScript==
     
 const CoresMarcadores = [
@@ -59,12 +59,12 @@ function isContrastEnough(hex) {
 
 function analisarPagina() {
     const tabelas = document.querySelectorAll('table.tabelaControle');
-    if (tabelas.length !== 2)
+    if (tabelas.length < 1 || tabelas.length > 2)
         throw new Error(`Número inesperado de tabelas: ${tabelas.length}.`);
     const infoTabelas = Array.from(tabelas, analisarTabela);
-    const divRecebidos = document.querySelector('div#divRecebidos');
+    const divRecebidos = document.querySelector('div#divRecebidos, div#divGerados');
     if (!divRecebidos)
-        throw new Error('Elemento não encontrado: "#divRecebidos".');
+        throw new Error('Elemento não encontrado: "#divRecebidos" | "#divGerados.');
     return { divRecebidos, tabelas: infoTabelas };
 }
 function analisarTabela(tabela) {
