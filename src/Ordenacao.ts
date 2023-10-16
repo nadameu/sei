@@ -6,4 +6,4 @@ export const Ordenacao = {
   INVERTER: 4,
   PRIORITARIOS: 8,
 } as const;
-export type Ordenacao = typeof Ordenacao[keyof typeof Ordenacao];
+export type Ordenacao = (typeof Ordenacao)[keyof typeof Ordenacao];
