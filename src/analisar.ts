@@ -31,9 +31,10 @@ function analisarTabela(tabela: HTMLTableElement): Tabela {
   return { elemento: tabela, cabecalho, processos: linhasProcessos.map(analisarLinha) };
 }
 
-function analisarTooltipLinkComMouseover(
-  link: HTMLAnchorElement,
-): { titulo: string; texto?: string } {
+function analisarTooltipLinkComMouseover(link: HTMLAnchorElement): {
+  titulo: string;
+  texto?: string;
+} {
   const match = link
     .getAttribute('onmouseover')!
     .match(/^return infraTooltipMostrar\('(.*)','(.+)'\);$/);
@@ -82,16 +83,20 @@ function analisarLinha(linha: HTMLTableRowElement, ordemOriginal: number): Proce
 }
 
 function analisarNumeroFormatado(numeroFormatado: string) {
-  const textoNumero = numeroFormatado.replace(/[\.-]/g, '');
+  const textoNumero = numeroFormatado.replace(/[.\-\/]/g, '');
   let ano, ordinal, local;
   if (textoNumero.length === 20) {
-    ano = Number(textoNumero.substr(9, 4));
-    ordinal = Number(textoNumero.substr(0, 7));
-    local = Number(textoNumero.substr(16, 4));
+    ano = Number(textoNumero.slice(9, 13));
+    ordinal = Number(textoNumero.slice(0, 7));
+    local = Number(textoNumero.slice(16, 20));
   } else if (textoNumero.length === 13) {
-    ano = 2000 + Number(textoNumero.substr(0, 2));
-    ordinal = Number(textoNumero.substr(3, 9));
-    local = Number(textoNumero.substr(2, 1));
+    ano = 2000 + Number(textoNumero.slice(0, 2));
+    ordinal = Number(textoNumero.slice(3, 12));
+    local = Number(textoNumero.slice(2, 3));
+  } else if (textoNumero.length === 10) {
+    ano = Number(textoNumero.slice(6, 10));
+    ordinal = Number(textoNumero.slice(0, 6));
+    local = 0;
   } else {
     throw new Error(`Tipo de número desconhecido: ${numeroFormatado}.`);
   }

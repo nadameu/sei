@@ -3,7 +3,7 @@
 // @namespace   http://nadameu.com.br/sei
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
 // @include     https://sei.trf4.jus.br/controlador.php?*
-// @version     13.0.4
+// @version     13.1.0
 // ==/UserScript==
     
 const CoresMarcadores = [
@@ -122,17 +122,22 @@ function analisarLinha(linha, ordemOriginal) {
     };
 }
 function analisarNumeroFormatado(numeroFormatado) {
-    const textoNumero = numeroFormatado.replace(/[\.-]/g, '');
+    const textoNumero = numeroFormatado.replace(/[.\-\/]/g, '');
     let ano, ordinal, local;
     if (textoNumero.length === 20) {
-        ano = Number(textoNumero.substr(9, 4));
-        ordinal = Number(textoNumero.substr(0, 7));
-        local = Number(textoNumero.substr(16, 4));
+        ano = Number(textoNumero.slice(9, 13));
+        ordinal = Number(textoNumero.slice(0, 7));
+        local = Number(textoNumero.slice(16, 20));
     }
     else if (textoNumero.length === 13) {
-        ano = 2000 + Number(textoNumero.substr(0, 2));
-        ordinal = Number(textoNumero.substr(3, 9));
-        local = Number(textoNumero.substr(2, 1));
+        ano = 2000 + Number(textoNumero.slice(0, 2));
+        ordinal = Number(textoNumero.slice(3, 12));
+        local = Number(textoNumero.slice(2, 3));
+    }
+    else if (textoNumero.length === 10) {
+        ano = Number(textoNumero.slice(6, 10));
+        ordinal = Number(textoNumero.slice(0, 6));
+        local = 0;
     }
     else {
         throw new Error(`Tipo de número desconhecido: ${numeroFormatado}.`);
