@@ -3,7 +3,8 @@
 // @namespace   http://nadameu.com.br/sei
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
 // @include     https://sei.trf4.jus.br/controlador.php?*
-// @version     13.1.0
+// @run-at      document-end
+// @version     14.0.0
 // ==/UserScript==
 
 const CoresMarcadores = [
@@ -259,9 +260,7 @@ function criarColunaAdicionalMarcador(marcador) {
   return [
     '<td class="colAdicionalMarcador">',
     marcador
-      ? `<div class="marcador" data-cor="${marcador.cor}">${corrigirHTML(marcador.nome)}</div>${
-          marcador.texto ? `<div class="marcadorTexto">${corrigirHTML(marcador.texto)}</div>` : ''
-        }`
+      ? `<div class="marcador" data-cor="${marcador.cor}">${corrigirHTML(marcador.nome)}</div>${marcador.texto ? `<div class="marcadorTexto">${corrigirHTML(marcador.texto)}</div>` : ''}`
       : '',
     '</td>',
   ].join('');
@@ -275,9 +274,7 @@ function criarDivEspecificacao(especificacao) {
 function criarDivAnotacao(anotacao) {
   if (!anotacao) return '';
   const classes = ['anotacao'].concat(anotacao.prioridade ? ['prioridade'] : []);
-  return `<div class="${classes.join(' ')}"><a href="${anotacao.url}"><img src="${
-    anotacao.src
-  }"></a> ${corrigirHTML(anotacao.texto)} (${corrigirHTML(anotacao.usuario)})</div>`;
+  return `<div class="${classes.join(' ')}"><a href="${anotacao.url}"><img src="${anotacao.src}"></a> ${corrigirHTML(anotacao.texto)} (${corrigirHTML(anotacao.usuario)})</div>`;
 }
 
 const Acao = {
@@ -436,20 +433,7 @@ const ordenarPorNumero = compareUsing(x => x.numero);
 const ordenarPorTipoEspecificacaoAnotacao = altOrdering(
   compareUsing(({ tipo, especificacao, anotacao }) => {
     var _a, _b;
-    return `${tipo.toLocaleLowerCase()}${
-      (_a =
-        especificacao === null || especificacao === void 0
-          ? void 0
-          : especificacao.toLocaleLowerCase()) !== null && _a !== void 0
-        ? _a
-        : 'zz'
-    }${
-      (_b =
-        anotacao === null || anotacao === void 0 ? void 0 : anotacao.texto.toLocaleLowerCase()) !==
-        null && _b !== void 0
-        ? _b
-        : 'zz'
-    }`;
+    return `${tipo.toLocaleLowerCase()}${(_a = especificacao === null || especificacao === void 0 ? void 0 : especificacao.toLocaleLowerCase()) !== null && _a !== void 0 ? _a : 'zz'}${(_b = anotacao === null || anotacao === void 0 ? void 0 : anotacao.texto.toLocaleLowerCase()) !== null && _b !== void 0 ? _b : 'zz'}`;
   }),
   ordenarPorOrdemPadrao,
 );
