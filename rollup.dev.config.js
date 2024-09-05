@@ -1,4 +1,4 @@
-import productionOptions from './rollup.config';
+import productionOptions from './rollup.config.js';
 import serve from 'rollup-plugin-serve';
 
 /** @type {import('rollup').RollupOptions} */

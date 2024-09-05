@@ -1,5 +1,6 @@
-import pkg from './package.json';
+import pkg from './package.json' assert { type: 'json' };
 import typescript from '@rollup/plugin-typescript';
+import resolve from '@rollup/plugin-node-resolve';
 import ts from 'typescript';
 
 /** @type {import('rollup').RollupOptions} */
@@ -18,6 +19,6 @@ const options = {
 // ==/UserScript==
     `,
   },
-  plugins: [typescript({ target: ts.ScriptTarget.ES2018 })],
+  plugins: [resolve(), typescript({ target: ts.ScriptTarget.ES2018 })],
 };
 export default options;

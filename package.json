@@ -4,17 +4,20 @@
   "description": "Facilita a utilização do sistema SEI! do TRF4",
   "repository": "github:nadameu/sei.git",
   "license": "MIT",
+  "type": "module",
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^10.0.0",
-    "@rollup/plugin-typescript": "^6.1.0",
-    "adt-ts": "^0.4.0",
-    "rollup": "^2.33.3",
-    "rollup-plugin-serve": "^1.1.0",
-    "tslib": "^2.0.3",
-    "typescript": "^4.0.5"
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "rollup": "^4.21.2",
+    "rollup-plugin-serve": "^1.1.1",
+    "tslib": "^2.7.0",
+    "typescript": "^5.5.4"
   },
   "scripts": {
     "build": "rollup -c",
     "start": "rollup -c rollup.dev.config.js -w"
+  },
+  "dependencies": {
+    "@nadameu/pipe": "^2.1.2"
   }
 }
