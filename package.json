@@ -8,6 +8,7 @@
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-typescript": "^11.1.6",
+    "prettier": "^3.3.3",
     "rollup": "^4.21.2",
     "rollup-plugin-serve": "^1.1.1",
     "tslib": "^2.7.0",
@@ -15,6 +16,7 @@
   },
   "scripts": {
     "build": "rollup -c",
+    "format": "prettier --write sei.user.js",
     "start": "rollup -c rollup.dev.config.js -w"
   },
   "dependencies": {

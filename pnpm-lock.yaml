@@ -18,6 +18,9 @@ importers:
       '@rollup/plugin-typescript':
         specifier: ^11.1.6
         version: 11.1.6(rollup@4.21.2)(tslib@2.7.0)(typescript@5.5.4)
+      prettier:
+        specifier: ^3.3.3
+        version: 3.3.3
       rollup:
         specifier: ^4.21.2
         version: 4.21.2
@@ -199,6 +202,11 @@ packages:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
     engines: {node: '>=8.6'}
 
+  prettier@3.3.3:
+    resolution: {integrity: sha512-i2tDNA0O5IrMO757lfrdQZCc2jPNDVntV0m/+4whiDfWaTKfMNgR7Qz0NAeGz/nRqF4m5/6CLzbP4/liHt12Ew==}
+    engines: {node: '>=14'}
+    hasBin: true
+
   resolve@1.22.8:
     resolution: {integrity: sha512-oKWePCxqpd6FlLvGV1VU0x7bkPmmCNolxzjMf4NczoDnQcIWrAF+cPtZn5i6n+RfD2d9i0tzpKnG6Yk168yIyw==}
     hasBin: true
@@ -335,6 +343,8 @@ snapshots:
   path-parse@1.0.7: {}
 
   picomatch@2.3.1: {}
+
+  prettier@3.3.3: {}
 
   resolve@1.22.8:
     dependencies:
