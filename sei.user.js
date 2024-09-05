@@ -62,6 +62,9 @@ function chain(f) {
 function map(f) {
     return chain(x => ok(f(x)));
 }
+function hasLength(obj, length) {
+    return obj.length === length;
+}
 
 function pipe(x) {
   let y = x;
@@ -141,8 +144,9 @@ function analisarPagina() {
 }
 function analisarTabela(tabela) {
     return pipe(tryCatch(() => {
-        if (!((tabela) => tabela.tBodies.length === 1)(tabela))
+        if (!hasLength(tabela.tBodies, 1))
             throw new ParseError('Erro ao analisar tabela.');
+        const tbody = tabela.tBodies[0];
         const cabecalho = tabela.rows[0];
         function assertCabecalho(condition) {
             if (!condition)
@@ -151,10 +155,16 @@ function analisarTabela(tabela) {
         assertCabecalho(cabecalho !== undefined);
         const celulasCabecalho = Array.from(cabecalho.cells);
         assertCabecalho(celulasCabecalho.every(x => x.matches('th')));
-        assertCabecalho(((cabecalho) => cabecalho.cells.length === 2)(cabecalho));
-        assertCabecalho(cabecalho.cells[1].colSpan === 3);
+        assertCabecalho(hasLength(celulasCabecalho, 2));
+        assertCabecalho(celulasCabecalho[1].colSpan === 3);
         const linhasProcessos = Array.from(tabela.rows).slice(1);
-        return pipe(all(linhasProcessos.map(analisarLinha)), map(processos => ({ elemento: tabela, cabecalho, processos })));
+        return pipe(all(linhasProcessos.map(analisarLinha)), map(processos => ({
+            tabela,
+            tbody,
+            cabecalho,
+            cabecalhoCells: celulasCabecalho,
+            processos,
+        })));
     }, e => {
         if (e instanceof ParseError)
             return err(e);
@@ -165,27 +175,29 @@ function analisarTooltipLinkComMouseover(link) {
     const match = link
         .getAttribute('onmouseover')
         .match(/^return infraTooltipMostrar\('(.*)','(.+)'\);$/);
-    if (!match)
+    if (!match || !hasLength(match, 3))
         return err(new ParseError('Erro ao analisar tooltip.'));
     const [, texto, titulo] = match;
     return ok({ titulo, texto: texto || undefined });
 }
 function analisarLinha(linha, ordemOriginal) {
-    if (!((linha) => linha.cells.length === 4)(linha))
-        return err(new ParseError(`Número inesperado de células: ${linha.cells.length}.`));
-    const linkProcesso = linha.cells[2].querySelector('a[href^="controlador.php?acao=procedimento_trabalhar&"][onmouseover]');
+    const cells = linha.cells;
+    if (!hasLength(cells, 4))
+        return err(new ParseError(`Número inesperado de células: ${cells.length}.`));
+    const linkProcesso = cells[2].querySelector('a[href^="controlador.php?acao=procedimento_trabalhar&"][onmouseover]');
     if (!linkProcesso)
         return err(new ParseError('Link do processo não encontrado.'));
     const numeroFormatado = linkProcesso.textContent;
     if (!numeroFormatado)
         return err(new ParseError('Número do processo não encontrado.'));
     const numero = analisarNumeroFormatado(numeroFormatado);
-    const imgAnotacao = linha.cells[1].querySelector([1, 2].map(n => `a[href][onmouseover] > img[src^="svg/anotacao${n}\.svg"]`).join(', '));
+    const imgAnotacao = cells[1].querySelector([1, 2].map(n => `a[href][onmouseover] > img[src^="svg/anotacao${n}\.svg"]`).join(', '));
     const anotacao = imgAnotacao ? analisarAnotacao(imgAnotacao) : ok(undefined);
-    const imgMarcador = linha.cells[1].querySelector(CoresMarcadores.map(({ cor }) => `a[href][onmouseover] > img[src^="svg/marcador_${cor}.svg"]`).join(', '));
+    const imgMarcador = cells[1].querySelector(CoresMarcadores.map(({ cor }) => `a[href][onmouseover] > img[src^="svg/marcador_${cor}.svg"]`).join(', '));
     const marcador = imgMarcador ? analisarMarcador(imgMarcador) : ok(undefined);
     return pipe(all([analisarTooltipLinkComMouseover(linkProcesso), numero, anotacao, marcador]), map(([{ titulo: tipo, texto: especificacao }, numero, anotacao, marcador]) => ({
         linha,
+        cells,
         link: linkProcesso,
         ordemOriginal,
         numero,
@@ -361,8 +373,8 @@ function corrigirHTML(texto) {
         .replace(/\r\n/g, '<br/>');
 }
 
-function criarColunasAdicionaisCabecalho(cabecalho) {
-    const coluna = cabecalho.cells[1];
+function criarColunasAdicionaisCabecalho(cabecalhoCells) {
+    const coluna = cabecalhoCells[1];
     coluna.colSpan = 2;
     coluna.insertAdjacentHTML('afterend', [
         '<th class="infraTh tituloControle colAdicionalMarcador">Marcador</th>',
@@ -370,14 +382,14 @@ function criarColunasAdicionaisCabecalho(cabecalho) {
         '<th class="infraTh"></th>',
     ].join(''));
 }
-function criarColunasAdicionaisProcesso(linha, processo) {
-    const coluna = linha.cells[2];
+function criarColunasAdicionaisProcesso({ cells, marcador, tipo, especificacao, anotacao, }) {
+    const coluna = cells[2];
     coluna.insertAdjacentHTML('afterend', [
-        criarColunaAdicionalMarcador(processo.marcador),
+        criarColunaAdicionalMarcador(marcador),
         '<td class="colAdicional">',
-        criarDivTipo(processo.tipo),
-        criarDivEspecificacao(processo.especificacao),
-        criarDivAnotacao(processo.anotacao),
+        criarDivTipo(tipo),
+        criarDivEspecificacao(especificacao),
+        criarDivAnotacao(anotacao),
         '</td>',
     ].join(''));
 }
@@ -571,15 +583,15 @@ function renderizarPagina(pagina, preferencias, dispatch) {
     let mostrarTooltip = !preferencias.mostrarTipo;
     adicionarEstilos();
     criarFormulario({ divRecebidos: pagina.divRecebidos, preferencias, dispatch });
-    for (const { cabecalho, processos } of pagina.tabelas) {
-        for (const celula of cabecalho.cells)
+    for (const { cabecalhoCells, processos } of pagina.tabelas) {
+        for (const celula of cabecalhoCells)
             celula.removeAttribute('width');
-        criarColunasAdicionaisCabecalho(cabecalho);
+        criarColunasAdicionaisCabecalho(cabecalhoCells);
         for (const processo of processos) {
             processo.linha.style.backgroundColor = obterCor(processo.tipo);
-            for (const celula of processo.linha.cells)
+            for (const celula of processo.cells)
                 celula.removeAttribute('width');
-            criarColunasAdicionaisProcesso(processo.linha, processo);
+            criarColunasAdicionaisProcesso(processo);
             processo.link.removeAttribute('onmouseover');
             processo.link.addEventListener('mouseover', () => {
                 var _a;
