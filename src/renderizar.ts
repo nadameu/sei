@@ -7,6 +7,7 @@ import {
 import { criarFormulario } from './criarFormulario';
 import { definirOrdenacaoProcessos } from './definirOrdenacaoTabelas';
 import { obterCor } from './obterCor';
+import { Ordenacao } from './Ordenacao';
 import { Pagina } from './Pagina';
 import { Preferencias } from './Preferencias';
 
@@ -37,7 +38,7 @@ export function renderizarPagina(
   }
 
   let agruparAtual: boolean = undefined as any;
-  let ordemAtual: number = undefined as any;
+  let ordemAtual: Ordenacao = undefined as any;
 
   atualizar(preferencias);
   return atualizar;

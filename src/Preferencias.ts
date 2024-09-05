@@ -1,3 +1,5 @@
+import { Ordenacao } from './Ordenacao';
+
 export interface Preferencias {
   ocultarFieldset: boolean;
   mostrarTipo: boolean;
@@ -5,5 +7,5 @@ export interface Preferencias {
   mostrarCores: boolean;
   mostrarMarcadores: boolean;
   agruparMarcadores: boolean;
-  ordemTabelas: number;
+  ordemTabelas: Ordenacao;
 }

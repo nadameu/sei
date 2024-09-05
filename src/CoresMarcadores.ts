@@ -40,7 +40,11 @@ function luminance(hex: string) {
     .slice(1)
     .map(x => parseInt(x, 16))
     .map(x => x / 255)
-    .map(x => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)));
+    .map(x => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4))) as [
+    number,
+    number,
+    number,
+  ];
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 function contrastRatio(hex: string) {

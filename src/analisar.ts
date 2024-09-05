@@ -4,85 +4,128 @@ import { Marcador } from './Marcador';
 import { Pagina } from './Pagina';
 import { Processo } from './Processo';
 import { Tabela } from './Tabela';
+import * as M from './M';
+import { pipe } from '@nadameu/pipe';
+import { ParseError } from './ParseError';
 
-export function analisarPagina(): Pagina {
+export function analisarPagina(): M.Result<Pagina, ParseError> {
   const tabelas = document.querySelectorAll<HTMLTableElement>('table.tabelaControle');
   if (tabelas.length < 1 || tabelas.length > 2)
-    throw new Error(`Número inesperado de tabelas: ${tabelas.length}.`);
-  const infoTabelas = Array.from(tabelas, analisarTabela);
+    return M.err(new ParseError(`Número inesperado de tabelas: ${tabelas.length}.`));
+  const infoTabelas = M.all(Array.from(tabelas, analisarTabela));
   const divRecebidos = document.querySelector<HTMLDivElement>('div#divRecebidos, div#divGerados');
-  if (!divRecebidos) throw new Error('Elemento não encontrado: "#divRecebidos" | "#divGerados.');
+  if (!divRecebidos)
+    return M.err(new ParseError('Elemento não encontrado: "#divRecebidos" | "#divGerados.'));
 
-  return { divRecebidos, tabelas: infoTabelas };
+  return pipe(
+    infoTabelas,
+    M.map(infoTabelas => ({ divRecebidos, tabelas: infoTabelas })),
+  );
 }
 
-function analisarTabela(tabela: HTMLTableElement): Tabela {
-  if (tabela.tBodies.length !== 1) throw new Error('Erro ao analisar tabela.');
-  const cabecalho = tabela.rows[0];
-  const err = () => {
-    throw new Error('Erro ao analisar cabeçalho.');
-  };
-  if (!cabecalho) err();
-  const celulasCabecalho = Array.from(cabecalho.cells);
-  if (!celulasCabecalho.every(x => x.matches('th'))) err();
-  if (cabecalho.cells.length !== 2) err();
-  if (cabecalho.cells[1].colSpan !== 3) err();
-  const linhasProcessos = Array.from(tabela.rows).slice(1);
-  return { elemento: tabela, cabecalho, processos: linhasProcessos.map(analisarLinha) };
+function analisarTabela(tabela: HTMLTableElement) {
+  return pipe(
+    M.tryCatch(
+      (): M.Result<Tabela, ParseError> => {
+        if (
+          !((tabela): tabela is HTMLTableElement & { tBodies: { 0: HTMLTableSectionElement } } =>
+            tabela.tBodies.length === 1)(tabela)
+        )
+          throw new ParseError('Erro ao analisar tabela.');
+        const cabecalho = tabela.rows[0];
+        function assertCabecalho(condition: boolean): asserts condition {
+          if (!condition) throw new ParseError('Erro ao analisar cabeçalho.');
+        }
+        assertCabecalho(cabecalho !== undefined);
+        const celulasCabecalho = Array.from(cabecalho.cells);
+        assertCabecalho(celulasCabecalho.every(x => x.matches('th')));
+        assertCabecalho(
+          ((
+            cabecalho,
+          ): cabecalho is HTMLTableRowElement & {
+            cells: Record<'0' | '1', HTMLTableCellElement>;
+          } => cabecalho.cells.length === 2)(cabecalho),
+        );
+        assertCabecalho(cabecalho.cells[1].colSpan === 3);
+        const linhasProcessos = Array.from(tabela.rows).slice(1);
+        return pipe(
+          M.all(linhasProcessos.map(analisarLinha)),
+          M.map(processos => ({ elemento: tabela, cabecalho, processos })),
+        );
+      },
+      e => {
+        if (e instanceof ParseError) return M.err(e);
+        throw e;
+      },
+    ),
+    M.chain(x => x),
+  );
 }
 
-function analisarTooltipLinkComMouseover(link: HTMLAnchorElement): {
-  titulo: string;
-  texto?: string;
-} {
+function analisarTooltipLinkComMouseover(link: HTMLAnchorElement): M.Result<
+  {
+    titulo: string;
+    texto?: string;
+  },
+  ParseError
+> {
   const match = link
     .getAttribute('onmouseover')!
     .match(/^return infraTooltipMostrar\('(.*)','(.+)'\);$/);
-  if (!match) throw new Error('Erro ao analisar tooltip.');
-  const [, texto, titulo] = match;
-  return { titulo, texto: texto || undefined };
+  if (!match) return M.err(new ParseError('Erro ao analisar tooltip.'));
+  const [, texto, titulo] = match as RegExpMatchArray & [string, string, string];
+  return M.ok({ titulo, texto: texto || undefined });
 }
 
-function analisarLinha(linha: HTMLTableRowElement, ordemOriginal: number): Processo {
-  if (linha.cells.length !== 4)
-    throw new Error(`Número inesperado de células: ${linha.cells.length}.`);
+function analisarLinha(linha: HTMLTableRowElement, ordemOriginal: number) {
+  if (
+    !((
+      linha,
+    ): linha is HTMLTableRowElement & {
+      cells: Record<'0' | '1' | '2' | '3', HTMLTableCellElement>;
+    } => linha.cells.length === 4)(linha)
+  )
+    return M.err(new ParseError(`Número inesperado de células: ${linha.cells.length}.`));
 
   const linkProcesso = linha.cells[2].querySelector<HTMLAnchorElement>(
     'a[href^="controlador.php?acao=procedimento_trabalhar&"][onmouseover]',
   );
-  if (!linkProcesso) throw new Error('Link do processo não encontrado.');
+  if (!linkProcesso) return M.err(new ParseError('Link do processo não encontrado.'));
 
   const numeroFormatado = linkProcesso.textContent;
-  if (!numeroFormatado) throw new Error('Número do processo não encontrado.');
+  if (!numeroFormatado) return M.err(new ParseError('Número do processo não encontrado.'));
   const numero = analisarNumeroFormatado(numeroFormatado);
-
-  const { titulo: tipo, texto: especificacao } = analisarTooltipLinkComMouseover(linkProcesso);
 
   const imgAnotacao = linha.cells[1].querySelector<HTMLImageElement>(
     [1, 2].map(n => `a[href][onmouseover] > img[src^="svg/anotacao${n}\.svg"]`).join(', '),
   );
-  const anotacao = imgAnotacao ? analisarAnotacao(imgAnotacao) : undefined;
+  const anotacao = imgAnotacao ? analisarAnotacao(imgAnotacao) : M.ok(undefined);
 
   const imgMarcador = linha.cells[1].querySelector<HTMLImageElement>(
     CoresMarcadores.map(
       ({ cor }) => `a[href][onmouseover] > img[src^="svg/marcador_${cor}.svg"]`,
     ).join(', '),
   );
-  const marcador = imgMarcador ? analisarMarcador(imgMarcador) : undefined;
+  const marcador = imgMarcador ? analisarMarcador(imgMarcador) : M.ok(undefined);
 
-  return {
-    linha,
-    link: linkProcesso,
-    ordemOriginal,
-    numero,
-    tipo,
-    especificacao,
-    anotacao,
-    marcador,
-  };
+  return pipe(
+    M.all([analisarTooltipLinkComMouseover(linkProcesso), numero, anotacao, marcador]),
+    M.map(
+      ([{ titulo: tipo, texto: especificacao }, numero, anotacao, marcador]): Processo => ({
+        linha,
+        link: linkProcesso,
+        ordemOriginal,
+        numero,
+        tipo,
+        especificacao,
+        anotacao,
+        marcador,
+      }),
+    ),
+  );
 }
 
-function analisarNumeroFormatado(numeroFormatado: string) {
+function analisarNumeroFormatado(numeroFormatado: string): M.Result<number, ParseError> {
   const textoNumero = numeroFormatado.replace(/[.\-\/]/g, '');
   let ano, ordinal, local;
   if (textoNumero.length === 20) {
@@ -98,22 +141,41 @@ function analisarNumeroFormatado(numeroFormatado: string) {
     ordinal = Number(textoNumero.slice(0, 6));
     local = 0;
   } else {
-    throw new Error(`Tipo de número desconhecido: ${numeroFormatado}.`);
+    return M.err(new ParseError(`Tipo de número desconhecido: ${numeroFormatado}.`));
   }
-  return ano * 1000000000 + ordinal + local / 10000;
+  return M.ok(ano * 1000000000 + ordinal + local / 10000);
 }
 
-function analisarAnotacao(imgAnotacao: HTMLImageElement): Anotacao {
+function analisarAnotacao(imgAnotacao: HTMLImageElement) {
   const link = imgAnotacao.parentElement as HTMLAnchorElement;
-  const { titulo: usuario, texto } = analisarTooltipLinkComMouseover(link);
-  if (!texto) throw new Error('Erro ao analisar tooltip.');
-  const prioridade = /^svg\/anotacao2\.svg/.test(imgAnotacao.getAttribute('src')!);
-  return { texto, usuario, prioridade, imagem: imgAnotacao, src: imgAnotacao.src, url: link.href };
+  return pipe(
+    analisarTooltipLinkComMouseover(link),
+    M.chain(({ titulo: usuario, texto }) => {
+      if (!texto) return M.err(new ParseError('Erro ao analisar tooltip.'));
+      const prioridade = /^svg\/anotacao2\.svg/.test(imgAnotacao.getAttribute('src')!);
+      return M.ok<Anotacao>({
+        texto,
+        usuario,
+        prioridade,
+        imagem: imgAnotacao,
+        src: imgAnotacao.src,
+        url: link.href,
+      });
+    }),
+  );
 }
 
-function analisarMarcador(imgMarcador: HTMLImageElement): Marcador {
-  const link = imgMarcador.parentElement as HTMLAnchorElement;
-  const { titulo: nome, texto } = analisarTooltipLinkComMouseover(link);
-  const cor = imgMarcador.getAttribute('src')!.match(/^svg\/marcador_(.*)\.svg/)![1];
-  return { imagem: imgMarcador, nome, cor, texto: texto || undefined };
+function analisarMarcador(imgMarcador: HTMLImageElement) {
+  return pipe(
+    imgMarcador.parentElement as HTMLAnchorElement,
+    analisarTooltipLinkComMouseover,
+    M.map(
+      ({ titulo: nome, texto }): Marcador => ({
+        imagem: imgMarcador,
+        nome,
+        cor: imgMarcador.getAttribute('src')!.match(/^svg\/marcador_(.*)\.svg/)![1]!,
+        texto,
+      }),
+    ),
+  );
 }

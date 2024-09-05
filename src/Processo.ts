@@ -2,7 +2,7 @@ import { Anotacao } from './Anotacao';
 import { Marcador } from './Marcador';
 
 export interface Processo {
-  linha: HTMLTableRowElement;
+  linha: HTMLTableRowElement & { cells: Record<0 | 1 | 2, HTMLTableCellElement> };
   link: HTMLAnchorElement;
   ordemOriginal: number;
   numero: number;

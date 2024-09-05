@@ -1,4 +1,4 @@
-import { Ordenacao } from './Ordenacao';
+import { Criterio, Ordenacao } from './Ordenacao';
 import {
   gerarFuncaoOrdenarPorMarcador,
   ordenarPorAnotacao,
@@ -11,39 +11,35 @@ import { Compare } from './Ordering';
 import { Processo } from './Processo';
 import { Tabela } from './Tabela';
 
-export function definirOrdenacaoProcessos(tabela: Tabela, ordenacao: number, agrupar: boolean) {
+export function definirOrdenacaoProcessos(tabela: Tabela, ordenacao: Ordenacao, agrupar: boolean) {
   let funcaoOrdenacao: Compare<Processo>;
-  switch (ordenacao & 3) {
-    case Ordenacao.ANOTACAO:
-      if (ordenacao & Ordenacao.PRIORITARIOS) {
+  switch (ordenacao.criterio) {
+    case Criterio.ANOTACAO:
+      if (ordenacao.prioritarios) {
         funcaoOrdenacao = ordenarPorAnotacaoPrioritariosPrimeiro;
       } else {
         funcaoOrdenacao = ordenarPorAnotacao;
       }
       break;
 
-    case Ordenacao.TIPO:
+    case Criterio.TIPO:
       funcaoOrdenacao = ordenarPorTipoEspecificacaoAnotacao;
       break;
 
-    case Ordenacao.NUMERO:
+    case Criterio.NUMERO:
       funcaoOrdenacao = ordenarPorNumero;
       break;
 
-    case Ordenacao.PADRAO:
+    case Criterio.PADRAO:
     default:
       funcaoOrdenacao = ordenarPorOrdemPadrao;
       break;
   }
-  if (agrupar)
-    funcaoOrdenacao = gerarFuncaoOrdenarPorMarcador(
-      funcaoOrdenacao,
-      (ordenacao & Ordenacao.INVERTER) > 0,
-    );
+  if (agrupar) funcaoOrdenacao = gerarFuncaoOrdenarPorMarcador(funcaoOrdenacao, ordenacao.inverter);
   const linhas = tabela.processos
     .slice()
     .sort(funcaoOrdenacao)
     .map(x => x.linha);
-  const linhasOrdenadas = (ordenacao & Ordenacao.INVERTER) > 0 ? linhas.reverse() : linhas;
+  const linhasOrdenadas = ordenacao.inverter ? linhas.reverse() : linhas;
   tabela.elemento.tBodies[0].append(...linhasOrdenadas);
 }

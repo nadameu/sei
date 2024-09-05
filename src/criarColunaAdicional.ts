@@ -3,7 +3,9 @@ import { corrigirHTML } from './corrigirHTML';
 import { Marcador } from './Marcador';
 import { Processo } from './Processo';
 
-export function criarColunasAdicionaisCabecalho(cabecalho: HTMLTableRowElement) {
+export function criarColunasAdicionaisCabecalho(
+  cabecalho: HTMLTableRowElement & { cells: { 1: HTMLTableCellElement } },
+) {
   const coluna = cabecalho.cells[1];
   coluna.colSpan = 2;
   coluna.insertAdjacentHTML(
@@ -16,7 +18,10 @@ export function criarColunasAdicionaisCabecalho(cabecalho: HTMLTableRowElement) 
   );
 }
 
-export function criarColunasAdicionaisProcesso(linha: HTMLTableRowElement, processo: Processo) {
+export function criarColunasAdicionaisProcesso(
+  linha: HTMLTableRowElement & { cells: { 2: HTMLTableCellElement } },
+  processo: Processo,
+) {
   const coluna = linha.cells[2];
   coluna.insertAdjacentHTML(
     'afterend',

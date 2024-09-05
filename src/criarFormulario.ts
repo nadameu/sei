@@ -1,5 +1,5 @@
 import { Acao } from './Acao';
-import { Ordenacao } from './Ordenacao';
+import { Criterio, Ordenacao, sord } from './Ordenacao';
 import { Preferencias } from './Preferencias';
 
 type PreferenciasBoolean = {
@@ -62,30 +62,62 @@ export function criarFormulario({
   }
 }
 
-function criarSelectOrdenacao(valor: number, dispatch: (acao: Acao) => void) {
+function criarSelectOrdenacao(valor: Ordenacao, dispatch: (acao: Acao) => void) {
   const select = document.createElement('select');
   select.style.display = 'inline-block';
   select.style.fontSize = '1em';
+  const makeValor = ({
+    criterio = Criterio.PADRAO,
+    inverter = false,
+    prioritarios = false,
+  }: Pick<Ordenacao, 'criterio'> & Partial<Omit<Ordenacao, 'criterio'>>): string =>
+    sord.serialize({
+      criterio,
+      inverter,
+      prioritarios,
+    });
   const campos = [
-    { valor: Ordenacao.PADRAO, nome: 'Padrão' },
-    { valor: Ordenacao.NUMERO, nome: 'Ano e número (antigos primeiro)' },
-    { valor: Ordenacao.NUMERO | Ordenacao.INVERTER, nome: 'Ano e número (novos primeiro)' },
-    { valor: Ordenacao.TIPO, nome: 'Tipo, especificação e anotação' },
-    { valor: Ordenacao.ANOTACAO, nome: 'Anotação (somente texto)' },
     {
-      valor: Ordenacao.ANOTACAO | Ordenacao.PRIORITARIOS,
+      valor: { criterio: Criterio.PADRAO },
+      nome: 'Padrão',
+    },
+    {
+      valor: { criterio: Criterio.NUMERO },
+      nome: 'Ano e número (antigos primeiro)',
+    },
+    {
+      valor: { criterio: Criterio.NUMERO, inverter: true },
+      nome: 'Ano e número (novos primeiro)',
+    },
+    {
+      valor: { criterio: Criterio.TIPO },
+      nome: 'Tipo, especificação e anotação',
+    },
+    {
+      valor: { criterio: Criterio.ANOTACAO },
+      nome: 'Anotação (somente texto)',
+    },
+    {
+      valor: { criterio: Criterio.ANOTACAO, prioritarios: true },
       nome: 'Anotação (prioritários primeiro)',
     },
-  ];
-  const options = campos.map(({ nome, valor }) => `<option value="${valor}">${nome}</option>`);
+  ] satisfies {
+    valor: Pick<Ordenacao, 'criterio'> & Partial<Omit<Ordenacao, 'criterio'>>;
+    nome: string;
+  }[];
+  const options = campos.map(
+    ({ nome, valor }) => `<option value="${makeValor(valor)}">${nome}</option>`,
+  );
   select.insertAdjacentHTML('beforeend', options.join(''));
   select.value = String(valor);
   const label = document.createElement('label');
   label.className = 'infraLabelOpcional';
   label.append('Ordenação dos processos: ', select);
   select.addEventListener('change', () => {
-    const valor = Number(select.value);
-    dispatch(Acao.setOrdenacao(valor));
+    const parsed = sord.parse(select.value);
+    if (parsed.valid) {
+      dispatch(Acao.setOrdenacao(parsed.value));
+    }
   });
   return label;
 }
