@@ -2,11 +2,10 @@ import { Anotacao } from './Anotacao';
 import { corrigirHTML } from './corrigirHTML';
 import { Marcador } from './Marcador';
 import { Processo } from './Processo';
+import { Tabela } from './Tabela';
 
-export function criarColunasAdicionaisCabecalho(
-  cabecalho: HTMLTableRowElement & { cells: { 1: HTMLTableCellElement } },
-) {
-  const coluna = cabecalho.cells[1];
+export function criarColunasAdicionaisCabecalho(cabecalhoCells: Tabela['cabecalhoCells']) {
+  const coluna = cabecalhoCells[1];
   coluna.colSpan = 2;
   coluna.insertAdjacentHTML(
     'afterend',
@@ -18,19 +17,22 @@ export function criarColunasAdicionaisCabecalho(
   );
 }
 
-export function criarColunasAdicionaisProcesso(
-  linha: HTMLTableRowElement & { cells: { 2: HTMLTableCellElement } },
-  processo: Processo,
-) {
-  const coluna = linha.cells[2];
+export function criarColunasAdicionaisProcesso({
+  cells,
+  marcador,
+  tipo,
+  especificacao,
+  anotacao,
+}: Processo) {
+  const coluna = cells[2];
   coluna.insertAdjacentHTML(
     'afterend',
     [
-      criarColunaAdicionalMarcador(processo.marcador),
+      criarColunaAdicionalMarcador(marcador),
       '<td class="colAdicional">',
-      criarDivTipo(processo.tipo),
-      criarDivEspecificacao(processo.especificacao),
-      criarDivAnotacao(processo.anotacao),
+      criarDivTipo(tipo),
+      criarDivEspecificacao(especificacao),
+      criarDivAnotacao(anotacao),
       '</td>',
     ].join(''),
   );

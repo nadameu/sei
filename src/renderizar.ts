@@ -21,13 +21,13 @@ export function renderizarPagina(
   let mostrarTooltip = !preferencias.mostrarTipo;
   adicionarEstilos();
   criarFormulario({ divRecebidos: pagina.divRecebidos, preferencias, dispatch });
-  for (const { cabecalho, processos } of pagina.tabelas) {
-    for (const celula of cabecalho.cells) celula.removeAttribute('width');
-    criarColunasAdicionaisCabecalho(cabecalho);
+  for (const { cabecalhoCells, processos } of pagina.tabelas) {
+    for (const celula of cabecalhoCells) celula.removeAttribute('width');
+    criarColunasAdicionaisCabecalho(cabecalhoCells);
     for (const processo of processos) {
       processo.linha.style.backgroundColor = obterCor(processo.tipo);
-      for (const celula of processo.linha.cells) celula.removeAttribute('width');
-      criarColunasAdicionaisProcesso(processo.linha, processo);
+      for (const celula of processo.cells) celula.removeAttribute('width');
+      criarColunasAdicionaisProcesso(processo);
       processo.link.removeAttribute('onmouseover');
       processo.link.addEventListener('mouseover', () => {
         if (mostrarTooltip) infraTooltipMostrar(processo.especificacao ?? '', processo.tipo);

@@ -27,11 +27,8 @@ function analisarTabela(tabela: HTMLTableElement) {
   return pipe(
     M.tryCatch(
       (): M.Result<Tabela, ParseError> => {
-        if (
-          !((tabela): tabela is HTMLTableElement & { tBodies: { 0: HTMLTableSectionElement } } =>
-            tabela.tBodies.length === 1)(tabela)
-        )
-          throw new ParseError('Erro ao analisar tabela.');
+        if (!M.hasLength(tabela.tBodies, 1)) throw new ParseError('Erro ao analisar tabela.');
+        const tbody = tabela.tBodies[0];
         const cabecalho = tabela.rows[0];
         function assertCabecalho(condition: boolean): asserts condition {
           if (!condition) throw new ParseError('Erro ao analisar cabeçalho.');
@@ -39,18 +36,18 @@ function analisarTabela(tabela: HTMLTableElement) {
         assertCabecalho(cabecalho !== undefined);
         const celulasCabecalho = Array.from(cabecalho.cells);
         assertCabecalho(celulasCabecalho.every(x => x.matches('th')));
-        assertCabecalho(
-          ((
-            cabecalho,
-          ): cabecalho is HTMLTableRowElement & {
-            cells: Record<'0' | '1', HTMLTableCellElement>;
-          } => cabecalho.cells.length === 2)(cabecalho),
-        );
-        assertCabecalho(cabecalho.cells[1].colSpan === 3);
+        assertCabecalho(M.hasLength(celulasCabecalho, 2));
+        assertCabecalho(celulasCabecalho[1].colSpan === 3);
         const linhasProcessos = Array.from(tabela.rows).slice(1);
         return pipe(
           M.all(linhasProcessos.map(analisarLinha)),
-          M.map(processos => ({ elemento: tabela, cabecalho, processos })),
+          M.map(processos => ({
+            tabela,
+            tbody,
+            cabecalho,
+            cabecalhoCells: celulasCabecalho,
+            processos,
+          })),
         );
       },
       e => {
@@ -72,22 +69,17 @@ function analisarTooltipLinkComMouseover(link: HTMLAnchorElement): M.Result<
   const match = link
     .getAttribute('onmouseover')!
     .match(/^return infraTooltipMostrar\('(.*)','(.+)'\);$/);
-  if (!match) return M.err(new ParseError('Erro ao analisar tooltip.'));
-  const [, texto, titulo] = match as RegExpMatchArray & [string, string, string];
+  if (!match || !M.hasLength(match, 3)) return M.err(new ParseError('Erro ao analisar tooltip.'));
+  const [, texto, titulo] = match;
   return M.ok({ titulo, texto: texto || undefined });
 }
 
 function analisarLinha(linha: HTMLTableRowElement, ordemOriginal: number) {
-  if (
-    !((
-      linha,
-    ): linha is HTMLTableRowElement & {
-      cells: Record<'0' | '1' | '2' | '3', HTMLTableCellElement>;
-    } => linha.cells.length === 4)(linha)
-  )
-    return M.err(new ParseError(`Número inesperado de células: ${linha.cells.length}.`));
+  const cells = linha.cells;
+  if (!M.hasLength(cells, 4))
+    return M.err(new ParseError(`Número inesperado de células: ${cells.length}.`));
 
-  const linkProcesso = linha.cells[2].querySelector<HTMLAnchorElement>(
+  const linkProcesso = cells[2].querySelector<HTMLAnchorElement>(
     'a[href^="controlador.php?acao=procedimento_trabalhar&"][onmouseover]',
   );
   if (!linkProcesso) return M.err(new ParseError('Link do processo não encontrado.'));
@@ -96,12 +88,12 @@ function analisarLinha(linha: HTMLTableRowElement, ordemOriginal: number) {
   if (!numeroFormatado) return M.err(new ParseError('Número do processo não encontrado.'));
   const numero = analisarNumeroFormatado(numeroFormatado);
 
-  const imgAnotacao = linha.cells[1].querySelector<HTMLImageElement>(
+  const imgAnotacao = cells[1].querySelector<HTMLImageElement>(
     [1, 2].map(n => `a[href][onmouseover] > img[src^="svg/anotacao${n}\.svg"]`).join(', '),
   );
   const anotacao = imgAnotacao ? analisarAnotacao(imgAnotacao) : M.ok(undefined);
 
-  const imgMarcador = linha.cells[1].querySelector<HTMLImageElement>(
+  const imgMarcador = cells[1].querySelector<HTMLImageElement>(
     CoresMarcadores.map(
       ({ cor }) => `a[href][onmouseover] > img[src^="svg/marcador_${cor}.svg"]`,
     ).join(', '),
@@ -113,6 +105,7 @@ function analisarLinha(linha: HTMLTableRowElement, ordemOriginal: number) {
     M.map(
       ([{ titulo: tipo, texto: especificacao }, numero, anotacao, marcador]): Processo => ({
         linha,
+        cells,
         link: linkProcesso,
         ordemOriginal,
         numero,

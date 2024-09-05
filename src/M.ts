@@ -65,3 +65,22 @@ export function chain<A, B, E2>(f: (_: A) => Result<B, E2>) {
 export function map<A, B>(f: (_: A) => B): <E>(fa: Result<A, E>) => Result<B, E> {
   return chain<A, B, never>(x => ok(f(x)));
 }
+
+type Measured<
+  Ts extends ArrayLike<unknown>,
+  N extends number,
+  Result extends any[] = [],
+> = number extends N
+  ? {}
+  : N extends Result['length']
+  ? Record<
+      { [K in keyof Result]: K }[Extract<keyof Result, number>],
+      Ts extends ArrayLike<infer T> ? T : unknown
+    >
+  : Measured<Ts, N, [...Result, any]>;
+export function hasLength<Ts extends ArrayLike<unknown>, N extends number>(
+  obj: Ts,
+  length: N,
+): obj is Ts & Measured<Ts, N> {
+  return obj.length === length;
+}
