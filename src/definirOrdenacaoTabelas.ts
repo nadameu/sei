@@ -41,5 +41,5 @@ export function definirOrdenacaoProcessos(tabela: Tabela, ordenacao: Ordenacao, 
     .sort(funcaoOrdenacao)
     .map(x => x.linha);
   const linhasOrdenadas = ordenacao.inverter ? linhas.reverse() : linhas;
-  tabela.elemento.tBodies[0].append(...linhasOrdenadas);
+  tabela.tbody.append(...linhasOrdenadas);
 }

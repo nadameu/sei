@@ -4,7 +4,7 @@
 // @include     https://sei.trf4.jus.br/sei/controlador.php?*
 // @include     https://sei.trf4.jus.br/controlador.php?*
 // @run-at      document-end
-// @version     14.1.0
+// @version     14.1.1
 // ==/UserScript==
 
 class ResultBase {}
@@ -636,7 +636,7 @@ function definirOrdenacaoProcessos(tabela, ordenacao, agrupar) {
     .sort(funcaoOrdenacao)
     .map(x => x.linha);
   const linhasOrdenadas = ordenacao.inverter ? linhas.reverse() : linhas;
-  tabela.elemento.tBodies[0].append(...linhasOrdenadas);
+  tabela.tbody.append(...linhasOrdenadas);
 }
 
 function obterCor(texto) {
