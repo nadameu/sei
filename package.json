@@ -5,19 +5,18 @@
   "repository": "github:nadameu/sei.git",
   "license": "MIT",
   "type": "module",
-  "devDependencies": {
-    "@rollup/plugin-node-resolve": "^15.2.3",
-    "@rollup/plugin-typescript": "^11.1.6",
-    "prettier": "^3.3.3",
-    "rollup": "^4.21.2",
-    "rollup-plugin-serve": "^1.1.1",
-    "tslib": "^2.7.0",
-    "typescript": "^5.5.4"
-  },
   "scripts": {
-    "build": "rollup -c",
+    "dev": "vite",
+    "build": "tsc && vite build",
     "format": "prettier --write sei.user.js",
-    "start": "rollup -c rollup.dev.config.js -w"
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "browserslist": "^4.23.3",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.7",
+    "vite-plugin-monkey": "^4.0.6"
   },
   "dependencies": {
     "@nadameu/pipe": "^2.1.2"
