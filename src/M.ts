@@ -1,9 +1,6 @@
-abstract class ResultBase<A, E> {}
 export type Result<A, E> = Ok<A> | Err<E>;
-class Ok<A> extends ResultBase<A, never> {
-  constructor(public value: A) {
-    super();
-  }
+class Ok<A> {
+  constructor(public value: A) {}
 }
 export function ok<A, E = never>(value: A): Result<A, E> {
   return new Ok(value);
@@ -11,10 +8,8 @@ export function ok<A, E = never>(value: A): Result<A, E> {
 export function isOk<A, E>(result: Result<A, E>): result is Ok<A> {
   return result instanceof Ok;
 }
-class Err<E> extends ResultBase<never, E> {
-  constructor(public reason: E) {
-    super();
-  }
+class Err<E> {
+  constructor(public reason: E) {}
 }
 export function err<E, A = never>(reason: E): Result<A, E> {
   return new Err(reason);
