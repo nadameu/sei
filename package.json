@@ -5,6 +5,7 @@
   "repository": "github:nadameu/sei.git",
   "license": "MIT",
   "type": "module",
+  "author": "nadameu",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
