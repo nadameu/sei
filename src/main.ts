@@ -1,38 +1,36 @@
-import { pipe } from '@nadameu/pipe';
 import { Acao } from './Acao';
 import { analisarPagina } from './analisar';
+import { Err } from './Err';
 import { getSetBoolean, getSetOrdenacao, obterPreferencias } from './preferenciasUsuario';
 import { renderizarPagina } from './renderizar';
-import * as M from './M';
 
 export function main() {
   const params = new URL(document.location.href).searchParams;
   if (params.get('acao') === 'procedimento_controlar') {
     if (document.querySelector<HTMLInputElement>('input#hdnTipoVisualizacao')?.value !== 'R') {
-      return M.ok(undefined);
+      return undefined;
     }
     const pagina = analisarPagina();
+    if (pagina instanceof Err) return pagina;
     const preferencias = obterPreferencias();
-    return pipe(
-      pagina,
-      M.map(pagina => {
-        const atualizar = renderizarPagina(pagina, preferencias, dispatch);
 
-        function dispatch(acao: Acao) {
-          switch (acao.tipo) {
-            case 'setBool':
-              getSetBoolean(acao.nome, acao.valor);
-              break;
+    const atualizar = renderizarPagina(pagina, preferencias, dispatch);
 
-            case 'setOrdenacao':
-              getSetOrdenacao('ordemTabelas', acao.valor);
-              break;
-          }
-          atualizar(obterPreferencias());
-        }
-      }),
-    );
+    return undefined;
+
+    function dispatch(acao: Acao) {
+      switch (acao.tipo) {
+        case 'setBool':
+          getSetBoolean(acao.nome, acao.valor);
+          break;
+
+        case 'setOrdenacao':
+          getSetOrdenacao('ordemTabelas', acao.valor);
+          break;
+      }
+      atualizar(obterPreferencias());
+    }
   } else {
-    return M.ok(undefined);
+    return undefined;
   }
 }

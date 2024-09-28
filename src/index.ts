@@ -1,10 +1,10 @@
-import { isErr } from './M';
+import { Err } from './Err';
 import { main } from './main';
 
 try {
   const result = main();
-  if (isErr(result)) {
-    console.error(result.reason);
+  if (result instanceof Err) {
+    console.error(result);
   }
 } catch (err) {
   console.error(err);
